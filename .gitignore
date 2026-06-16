@@ -1,0 +1,28 @@
+# Node.js
+**/node_modules/
+**/npm-debug.log*
+**/yarn-error.log*
+
+# Next.js Build Output
+frontend/.next/
+frontend/out/
+
+# TypeScript Compiled Code
+backend/dist/
+
+# Local SQLite Database
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/dev.db
+backend/dev.db-journal
+
+# Configuration & Sensitive Environment Secrets
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db

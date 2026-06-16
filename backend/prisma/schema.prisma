@@ -1,0 +1,55 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Configured for local SQLite sandboxing
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  isSubscribed    Boolean   @default(false)
+  subscriptionEnd DateTime?
+  downloadCount   Int       @default(0)
+  refreshToken    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Medicine {
+  id             String   @id @default(uuid())
+  drugName       String
+  indication     String
+  moa            String
+  additionalData String   // Stringified JSON for SQLite storage
+  createdAt      DateTime @default(now())
+
+  @@index([drugName])
+  @@index([indication])
+  @@index([moa])
+}
+
+model DemoRequest {
+  id           String   @id @default(uuid())
+  name         String
+  company      String
+  email        String
+  jobTitle     String
+  requirements String
+  createdAt    DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
