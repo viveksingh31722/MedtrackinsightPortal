@@ -14,10 +14,48 @@ function SearchResultsContent() {
   const fieldParam = searchParams.get('field') || 'all';
   const datasetParam = searchParams.get('dataset') || 'Approved Drugs';
 
+  const ALL_COUNTRIES = ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'];
+  const ALL_DISEASES = ['Fever', 'Cold/Cough', 'Asthma'];
+  
+  const getCountriesFromParams = () => {
+    const countriesStr = searchParams.get('countries');
+    if (countriesStr !== null) {
+      return countriesStr.split(',').map(c => c.trim()).filter(Boolean);
+    }
+    const clivalCountries: string[] = [];
+    for (let i = 0; i < 15; i++) {
+      const val = searchParams.get(`searchCountry[${i}]`);
+      if (val) {
+        clivalCountries.push(val);
+      }
+    }
+    if (clivalCountries.length > 0) {
+      return clivalCountries;
+    }
+    return ALL_COUNTRIES;
+  };
+
+  const getDiseasesFromParams = () => {
+    const diseasesStr = searchParams.get('diseases');
+    if (diseasesStr !== null) {
+      return diseasesStr.split(',').map(d => d.trim()).filter(Boolean);
+    }
+    return ALL_DISEASES;
+  };
+
+  const countriesParam = getCountriesFromParams();
+  const diseasesParam = getDiseasesFromParams();
+
   // Search inputs
   const [query, setQuery] = useState(queryParam);
   const [field, setField] = useState(fieldParam);
   const [dataset, setDataset] = useState(datasetParam);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(countriesParam);
+  const [selectedDiseases, setSelectedDiseases] = useState<string[]>(diseasesParam);
+
+  // Suggestions UI states
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // API data states
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -47,24 +85,54 @@ function SearchResultsContent() {
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([]);
   const [selectedSponsors, setSelectedSponsors] = useState<string[]>([]);
 
+  // Autocomplete fetcher
+  useEffect(() => {
+    if (query.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+    
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(data.suggestions);
+        }
+      } catch (err) {
+        console.error('Suggestions fetch error:', err);
+      }
+    }, 200); // 200ms debounce
+    
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, apiBaseUrl]);
+
   // Track page parameters when URL changes
   useEffect(() => {
     setQuery(queryParam);
     setField(fieldParam);
     setDataset(datasetParam);
+    const parsedCountries = getCountriesFromParams();
+    setSelectedCountries(parsedCountries);
+    const parsedDiseases = getDiseasesFromParams();
+    setSelectedDiseases(parsedDiseases);
     fetchSearchResults(1);
-  }, [queryParam, fieldParam, datasetParam]);
+  }, [queryParam, fieldParam, datasetParam, searchParams]);
 
   // Fetch search results from backend
   const fetchSearchResults = async (pageNum: number) => {
     try {
       setLoading(true);
+      const currentCountries = getCountriesFromParams();
+      const currentDiseases = getDiseasesFromParams();
       const params = new URLSearchParams({
         query: queryParam,
         field: fieldParam,
         dataset: datasetParam,
         page: pageNum.toString(),
         limit: '15',
+        countries: currentCountries.join(','),
+        diseases: currentDiseases.join(','),
       });
 
       const res = await fetch(`${apiBaseUrl}/medicine/search?${params.toString()}`, {
@@ -94,6 +162,60 @@ function SearchResultsContent() {
     if (query.trim() !== '') params.append('query', query.trim());
     if (field !== 'all') params.append('field', field);
     if (dataset !== '') params.append('dataset', dataset);
+    params.append('countries', selectedCountries.join(','));
+    params.append('diseases', selectedDiseases.join(','));
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleCountryToggle = (country: string) => {
+    const nextCountries = selectedCountries.includes(country)
+      ? selectedCountries.filter(c => c !== country)
+      : [...selectedCountries, country];
+    
+    setSelectedCountries(nextCountries);
+    
+    const params = new URLSearchParams(window.location.search);
+    params.set('countries', nextCountries.join(','));
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleSelectAllCountries = () => {
+    setSelectedCountries(ALL_COUNTRIES);
+    const params = new URLSearchParams(window.location.search);
+    params.set('countries', ALL_COUNTRIES.join(','));
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleClearAllCountries = () => {
+    setSelectedCountries([]);
+    const params = new URLSearchParams(window.location.search);
+    params.set('countries', '');
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleDiseaseToggle = (disease: string) => {
+    const nextDiseases = selectedDiseases.includes(disease)
+      ? selectedDiseases.filter(d => d !== disease)
+      : [...selectedDiseases, disease];
+    
+    setSelectedDiseases(nextDiseases);
+    
+    const params = new URLSearchParams(window.location.search);
+    params.set('diseases', nextDiseases.join(','));
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleSelectAllDiseases = () => {
+    setSelectedDiseases(ALL_DISEASES);
+    const params = new URLSearchParams(window.location.search);
+    params.set('diseases', ALL_DISEASES.join(','));
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleClearAllDiseases = () => {
+    setSelectedDiseases([]);
+    const params = new URLSearchParams(window.location.search);
+    params.set('diseases', '');
     router.push(`/search?${params.toString()}`);
   };
 
@@ -185,10 +307,14 @@ function SearchResultsContent() {
     }
 
     try {
+      const currentCountries = getCountriesFromParams();
+      const currentDiseases = getDiseasesFromParams();
       const params = new URLSearchParams({
         query: queryParam,
         field: fieldParam,
         dataset: datasetParam,
+        countries: currentCountries.join(','),
+        diseases: currentDiseases.join(','),
       });
 
       const downloadUrl = `${apiBaseUrl}/medicine/download?${params.toString()}`;
@@ -246,48 +372,274 @@ function SearchResultsContent() {
     <div className="container" style={{ padding: '32px 24px' }}>
       
       {/* Top Search Edit Panel */}
-      <div className="card" style={{ marginBottom: '32px', padding: '20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-group" style={{ flexGrow: 1, minWidth: '200px' }}>
-            <label className="form-label">Active Keyword</label>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
-              className="form-input"
-              style={{ height: '42px' }}
-            />
+      <div className="card" style={{ marginBottom: '32px', padding: '24px' }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flexGrow: 1, minWidth: '200px', position: 'relative' }}>
+              <label className="form-label">Active Keyword</label>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Search..."
+                className="form-input"
+                style={{ height: '42px', width: '100%' }}
+              />
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="autocomplete-dropdown">
+                  {suggestions.map((suggestion, idx) => {
+                    let icon = '💊';
+                    if (suggestion.type === 'disease') icon = '🦠';
+                    if (suggestion.type === 'country') icon = '🌎';
+                    
+                    return (
+                      <div
+                        key={idx}
+                        className="autocomplete-item"
+                        onClick={() => {
+                          if (suggestion.type === 'medicine') {
+                            setQuery(suggestion.text);
+                            setField('drugName');
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('query', suggestion.text);
+                            params.set('field', 'drugName');
+                            router.push(`/search?${params.toString()}`);
+                          } else if (suggestion.type === 'disease') {
+                            setQuery(suggestion.text);
+                            setField('indication');
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('query', suggestion.text);
+                            params.set('field', 'indication');
+                            router.push(`/search?${params.toString()}`);
+                          } else if (suggestion.type === 'country') {
+                            setQuery('');
+                            setSelectedCountries([suggestion.text]);
+                            const params = new URLSearchParams(window.location.search);
+                            params.set('query', '');
+                            params.set('countries', suggestion.text);
+                            router.push(`/search?${params.toString()}`);
+                          }
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        <span style={{ marginRight: '8px' }}>{icon}</span>
+                        <span style={{ fontWeight: 600 }}>{suggestion.text}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {suggestion.type}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="form-group" style={{ width: '180px' }}>
+              <label className="form-label">Search Criteria</label>
+              <select
+                value={field}
+                onChange={(e) => setField(e.target.value)}
+                className="form-input"
+                style={{ height: '42px' }}
+              >
+                <option value="all">Search All</option>
+                <option value="drugName">Drug Name</option>
+                <option value="indication">Indication</option>
+                <option value="moa">Mechanism (MOA)</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ width: '200px' }}>
+              <label className="form-label">Source Database</label>
+              <select
+                value={dataset}
+                onChange={(e) => setDataset(e.target.value)}
+                className="form-input"
+                style={{ height: '42px' }}
+              >
+                <option value="Approved Drugs">Approved Drugs (FDA)</option>
+                <option value="Clinical Pipeline">Clinical Pipeline</option>
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ height: '42px', padding: '0 24px' }}>
+              Update Query
+            </button>
           </div>
-          <div className="form-group" style={{ width: '180px' }}>
-            <label className="form-label">Search Criteria</label>
-            <select
-              value={field}
-              onChange={(e) => setField(e.target.value)}
-              className="form-input"
-              style={{ height: '42px' }}
-            >
-              <option value="all">Search All</option>
-              <option value="drugName">Drug Name</option>
-              <option value="indication">Indication</option>
-              <option value="moa">Mechanism (MOA)</option>
-            </select>
+          
+          {/* Countries Checkbox Panel */}
+          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-light, #64748b)' }}>
+                Target Markets / Jurisdictions
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleSelectAllCountries}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary, #3b82f6)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                  }}
+                  className="hover-bg-light"
+                >
+                  Select All
+                </button>
+                <span style={{ color: '#cbd5e1', fontSize: '12px' }}>|</span>
+                <button
+                  type="button"
+                  onClick={handleClearAllCountries}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted, #64748b)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                  }}
+                  className="hover-bg-light"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {ALL_COUNTRIES.map((country) => {
+                const isChecked = selectedCountries.includes(country);
+                return (
+                  <label
+                    key={country}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      borderRadius: '9999px',
+                      border: `1.5px solid ${isChecked ? 'var(--primary, #3b82f6)' : 'var(--border-color, #cbd5e1)'}`,
+                      backgroundColor: isChecked ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                      color: isChecked ? 'var(--primary, #3b82f6)' : 'var(--text-main, #334155)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                    className="country-pill-label"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleCountryToggle(country)}
+                      style={{
+                        margin: 0,
+                        cursor: 'pointer',
+                        accentColor: 'var(--primary, #3b82f6)',
+                      }}
+                    />
+                    <span>{country}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
-          <div className="form-group" style={{ width: '200px' }}>
-            <label className="form-label">Source Database</label>
-            <select
-              value={dataset}
-              onChange={(e) => setDataset(e.target.value)}
-              className="form-input"
-              style={{ height: '42px' }}
-            >
-              <option value="Approved Drugs">Approved Drugs (FDA)</option>
-              <option value="Clinical Pipeline">Clinical Pipeline</option>
-            </select>
+
+          {/* Indications/Diseases Checkbox Panel */}
+          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-light, #64748b)' }}>
+                Target Indications / Diseases
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleSelectAllDiseases}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary, #3b82f6)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                  }}
+                  className="hover-bg-light"
+                >
+                  Select All
+                </button>
+                <span style={{ color: '#cbd5e1', fontSize: '12px' }}>|</span>
+                <button
+                  type="button"
+                  onClick={handleClearAllDiseases}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted, #64748b)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                  }}
+                  className="hover-bg-light"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {ALL_DISEASES.map((disease) => {
+                const isChecked = selectedDiseases.includes(disease);
+                return (
+                  <label
+                    key={disease}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      borderRadius: '9999px',
+                      border: `1.5px solid ${isChecked ? 'var(--primary, #3b82f6)' : 'var(--border-color, #cbd5e1)'}`,
+                      backgroundColor: isChecked ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                      color: isChecked ? 'var(--primary, #3b82f6)' : 'var(--text-main, #334155)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                    className="country-pill-label"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleDiseaseToggle(disease)}
+                      style={{
+                        margin: 0,
+                        cursor: 'pointer',
+                        accentColor: 'var(--primary, #3b82f6)',
+                      }}
+                    />
+                    <span>{disease}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
-          <button type="submit" className="btn btn-primary" style={{ height: '42px', padding: '0 24px' }}>
-            Update Query
-          </button>
         </form>
       </div>
 
@@ -505,7 +857,25 @@ function SearchResultsContent() {
                     const additional = med.additionalData || {};
                     return (
                       <tr key={med.id} onClick={() => handleRowClick(med)} className="clickable-row">
-                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>{med.drugName}</td>
+                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                          {med.drugName}
+                          <span 
+                            style={{ 
+                              marginLeft: '8px', 
+                              fontSize: '10px', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                              color: 'var(--primary)',
+                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              display: 'inline-block',
+                              fontWeight: 600,
+                              textTransform: 'uppercase'
+                            }}
+                          >
+                            {med.country || additional.country || 'US'}
+                          </span>
+                        </td>
                         <td>{med.indication}</td>
                         <td>
                           <span className="badge badge-info" style={{ fontFamily: 'monospace' }}>
@@ -640,6 +1010,12 @@ function SearchResultsContent() {
                     <div className="meta-item">
                       <span className="meta-label">Brand Name</span>
                       <span className="meta-value">{selectedDrug.additionalData?.brandName || 'N/A'}</span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="meta-label">Target Market</span>
+                      <span className="meta-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                        🌎 {selectedDrug.country || selectedDrug.additionalData?.country || 'US'}
+                      </span>
                     </div>
                   </div>
                 </div>

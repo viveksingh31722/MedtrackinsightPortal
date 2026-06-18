@@ -33,7 +33,7 @@ const makeDrugData = (
       route,
       
       // Clinical & Scientific Specifications (Remaining 35 columns)
-      country: 'USA',
+      country: ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'][Math.floor(Math.random() * 7)],
       completionDate: '2025-10-30',
       trialId: 'NCT0' + Math.floor(10000000 + Math.random() * 90000000),
       estimatedEnrollment: Math.floor(200 + Math.random() * 1500),
@@ -251,11 +251,59 @@ async function main() {
       'Pending Approval',
       'Intravenous Infusion'
     ),
+    makeDrugData(
+      'Paracetamol',
+      'Fever',
+      'COX Inhibitor',
+      'Approved',
+      'Approved Drugs',
+      'Johnson & Johnson',
+      'Tylenol / Panadol',
+      'Cyclooxygenase Enzymes',
+      'Active',
+      'Oral Tablet'
+    ),
+    makeDrugData(
+      'Dextromethorphan',
+      'Cold/Cough',
+      'NMDA Receptor Antagonist',
+      'Approved',
+      'Approved Drugs',
+      'Reckitt Benckiser',
+      'Robitussin',
+      'NMDA Receptor',
+      'Active',
+      'Oral Syrup'
+    ),
+    makeDrugData(
+      'Ibuprofen',
+      'Fever',
+      'Non-selective COX Inhibitor',
+      'Approved',
+      'Approved Drugs',
+      'Advil Inc.',
+      'Advil / Motrin',
+      'COX-1 & COX-2 Proteins',
+      'Active',
+      'Oral Tablet'
+    ),
+    makeDrugData(
+      'Guaifenesin',
+      'Cold/Cough',
+      'Mucolytic Expectorant',
+      'Approved',
+      'Approved Drugs',
+      'Mucinex Health',
+      'Mucinex',
+      'Mucus Clearance Receptors',
+      'Active',
+      'Oral Tablet'
+    ),
   ];
 
   // 3. Generate 60 additional random mock records for testing scale & UI pagination
   const drugNames = ['Liraglutide', 'Dapagliflozin', 'Nivolumab', 'Ipilimumab', 'Trastuzumab', 'Rituximab', 'Infliximab', 'Etanercept', 'Ustekinumab', 'Dupilumab', 'Secukinumab', 'Ocrelizumab', 'Emicizumab', 'Risankizumab', 'Teclistamab', 'Mirvetuximab', 'Epcoritamab', 'Glofitamab', 'Talquetamab', 'Elranatamab', 'Zanubrutinib', 'Acalabrutinib', 'Pirtobrutinib', 'Capivasertib', 'Elacestrant', 'Sotatercept', 'Margetuximab', 'Loncastuximab', 'Tisotumab', 'Garnetumab', 'Velsertib', 'Daxotral', 'Pegzilarginase', 'Efruxifermin', 'Bifenercept', 'Ranibizumab', 'Pegfilgrastim', 'Filgrastim', 'Denosumab', 'Daratumumab'];
-  const indications = ['Type 2 Diabetes', 'Heart Failure', 'Non-Small Cell Lung Cancer', 'Melanoma', 'Renal Cell Carcinoma', 'Breast Cancer', 'Rheumatoid Arthritis', 'Plaque Psoriasis', 'Atopic Dermatitis', 'Multiple Sclerosis', 'Hemophilia A', 'Crohns Disease', 'Ulcerative Colitis', 'Asthma', 'Lupus Nephritis', 'Ovarian Cancer', 'Multiple Myeloma', 'NASH', 'Anemia'];
+  const indications = ['Type 2 Diabetes', 'Heart Failure', 'Non-Small Cell Lung Cancer', 'Melanoma', 'Renal Cell Carcinoma', 'Breast Cancer', 'Rheumatoid Arthritis', 'Plaque Psoriasis', 'Atopic Dermatitis', 'Multiple Sclerosis', 'Hemophilia A', 'Crohns Disease', 'Ulcerative Colitis', 'Asthma', 'Lupus Nephritis', 'Ovarian Cancer', 'Multiple Myeloma', 'NASH', 'Anemia', 'Fever', 'Cold/Cough'];
   const moas = ['GLP-1 Receptor Agonist', 'SGLT2 Inhibitor', 'PD-1 Inhibitor', 'CTLA-4 Inhibitor', 'HER2 Receptor Antagonist', 'CD20 Monoclonal Antibody', 'TNF Inhibitor', 'IL-23 Inhibitor', 'IL-4R/IL-13 Inhibitor', 'IL-17A Inhibitor', 'CD20 x CD3 Bispecific Antibody', 'BCMA x CD3 Bispecific Antibody', 'BTK Inhibitor', 'AKT Inhibitor', 'Estrogen Receptor Antagonist', 'Activin Receptor Type IIA Ligand Trap', 'VEGF Inhibitor', 'G-CSF Receptor Agonist', 'RANKL Inhibitor', 'CD38 Monoclonal Antibody'];
   const sponsors = ['Merck & Co.', 'Novo Nordisk', 'AstraZeneca', 'Bristol Myers Squibb', 'Roche Genentech', 'Pfizer', 'Eli Lilly', 'AbbVie', 'Johnson & Johnson', 'Sanofi', 'Novartis', 'GlaxoSmithKline', 'Takeda', 'Amgen', 'Gilead Sciences'];
   const routes = ['Intravenous Infusion', 'Subcutaneous Injection', 'Oral Tablet', 'Oral Capsule', 'Intramuscular Injection'];

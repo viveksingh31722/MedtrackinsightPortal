@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { searchMedicines, getMedicineById, downloadMedicines } from '../controllers/medicine.controller';
+import { searchMedicines, getMedicineById, downloadMedicines, getSuggestions } from '../controllers/medicine.controller';
 import { authenticateJWT } from '../middleware/auth.middleware';
 
 const router = Router();
+
+// Search autocomplete suggestions
+router.get('/suggestions', getSuggestions);
 
 // Medicine listing and search - Public access with dynamic subscription columns masking
 router.get('/search', searchMedicines);

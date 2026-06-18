@@ -10,6 +10,10 @@ export default function HomePage() {
   const [field, setField] = useState('all');
   const [dataset, setDataset] = useState('Approved Drugs');
   
+  // Suggestions UI states
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Database stats state
   const [stats, setStats] = useState({
     totalMedicines: 10,
@@ -19,6 +23,28 @@ export default function HomePage() {
 
   const { apiBaseUrl, user } = useApp();
   const router = useRouter();
+
+  // Autocomplete fetcher
+  useEffect(() => {
+    if (query.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+    
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(data.suggestions);
+        }
+      } catch (err) {
+        console.error('Suggestions fetch error:', err);
+      }
+    }, 200); // 200ms debounce
+    
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, apiBaseUrl]);
 
   // Load stats from backend on mount
   useEffect(() => {
@@ -76,16 +102,56 @@ export default function HomePage() {
                 </div>
 
                 {/* Query Input */}
-                <div className="form-group">
+                <div className="form-group" style={{ position: 'relative' }}>
                   <label htmlFor="query" className="form-label">Search Criteria</label>
                   <input
                     id="query"
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     placeholder="Enter Drug Name, Indication, or MOA..."
                     className="form-input"
                   />
+
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="autocomplete-dropdown">
+                      {suggestions.map((suggestion, idx) => {
+                        let icon = '💊';
+                        if (suggestion.type === 'disease') icon = '🦠';
+                        if (suggestion.type === 'country') icon = '🌎';
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className="autocomplete-item"
+                            onClick={() => {
+                              if (suggestion.type === 'medicine') {
+                                setQuery(suggestion.text);
+                                setField('drugName');
+                                router.push(`/search?query=${encodeURIComponent(suggestion.text)}&field=drugName&dataset=${encodeURIComponent(dataset)}`);
+                              } else if (suggestion.type === 'disease') {
+                                setQuery(suggestion.text);
+                                setField('indication');
+                                router.push(`/search?query=${encodeURIComponent(suggestion.text)}&field=indication&dataset=${encodeURIComponent(dataset)}`);
+                              } else if (suggestion.type === 'country') {
+                                setQuery('');
+                                router.push(`/search?query=&countries=${encodeURIComponent(suggestion.text)}&dataset=${encodeURIComponent(dataset)}`);
+                              }
+                              setShowSuggestions(false);
+                            }}
+                          >
+                            <span style={{ marginRight: '8px' }}>{icon}</span>
+                            <span style={{ fontWeight: 600 }}>{suggestion.text}</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              {suggestion.type}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Dropdown criteria column selector */}

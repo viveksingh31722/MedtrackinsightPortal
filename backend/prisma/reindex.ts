@@ -66,6 +66,7 @@ async function runReindexing() {
           target: { type: 'text' },
           status: { type: 'keyword' },
           route: { type: 'text' },
+          country: { type: 'keyword' },
           createdAt: { type: 'date' },
           additionalData: { type: 'text', index: false } // Stored only, not searchable raw JSON string
         },
@@ -107,6 +108,7 @@ async function runReindexing() {
           target: additional.target || 'N/A',
           status: additional.status || 'Active',
           route: additional.route || 'N/A',
+          country: additional.country || 'US',
           createdAt: med.createdAt,
           additionalData: med.additionalData
         }
