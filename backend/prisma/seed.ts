@@ -253,11 +253,57 @@ async function main() {
     ),
   ];
 
+  // 3. Generate 60 additional random mock records for testing scale & UI pagination
+  const drugNames = ['Liraglutide', 'Dapagliflozin', 'Nivolumab', 'Ipilimumab', 'Trastuzumab', 'Rituximab', 'Infliximab', 'Etanercept', 'Ustekinumab', 'Dupilumab', 'Secukinumab', 'Ocrelizumab', 'Emicizumab', 'Risankizumab', 'Teclistamab', 'Mirvetuximab', 'Epcoritamab', 'Glofitamab', 'Talquetamab', 'Elranatamab', 'Zanubrutinib', 'Acalabrutinib', 'Pirtobrutinib', 'Capivasertib', 'Elacestrant', 'Sotatercept', 'Margetuximab', 'Loncastuximab', 'Tisotumab', 'Garnetumab', 'Velsertib', 'Daxotral', 'Pegzilarginase', 'Efruxifermin', 'Bifenercept', 'Ranibizumab', 'Pegfilgrastim', 'Filgrastim', 'Denosumab', 'Daratumumab'];
+  const indications = ['Type 2 Diabetes', 'Heart Failure', 'Non-Small Cell Lung Cancer', 'Melanoma', 'Renal Cell Carcinoma', 'Breast Cancer', 'Rheumatoid Arthritis', 'Plaque Psoriasis', 'Atopic Dermatitis', 'Multiple Sclerosis', 'Hemophilia A', 'Crohns Disease', 'Ulcerative Colitis', 'Asthma', 'Lupus Nephritis', 'Ovarian Cancer', 'Multiple Myeloma', 'NASH', 'Anemia'];
+  const moas = ['GLP-1 Receptor Agonist', 'SGLT2 Inhibitor', 'PD-1 Inhibitor', 'CTLA-4 Inhibitor', 'HER2 Receptor Antagonist', 'CD20 Monoclonal Antibody', 'TNF Inhibitor', 'IL-23 Inhibitor', 'IL-4R/IL-13 Inhibitor', 'IL-17A Inhibitor', 'CD20 x CD3 Bispecific Antibody', 'BCMA x CD3 Bispecific Antibody', 'BTK Inhibitor', 'AKT Inhibitor', 'Estrogen Receptor Antagonist', 'Activin Receptor Type IIA Ligand Trap', 'VEGF Inhibitor', 'G-CSF Receptor Agonist', 'RANKL Inhibitor', 'CD38 Monoclonal Antibody'];
+  const sponsors = ['Merck & Co.', 'Novo Nordisk', 'AstraZeneca', 'Bristol Myers Squibb', 'Roche Genentech', 'Pfizer', 'Eli Lilly', 'AbbVie', 'Johnson & Johnson', 'Sanofi', 'Novartis', 'GlaxoSmithKline', 'Takeda', 'Amgen', 'Gilead Sciences'];
+  const routes = ['Intravenous Infusion', 'Subcutaneous Injection', 'Oral Tablet', 'Oral Capsule', 'Intramuscular Injection'];
+  const phases = ['Phase I', 'Phase II', 'Phase III', 'Pre-clinical', 'Approved'];
+
+  for (let i = 0; i < 60; i++) {
+    const drugName = drugNames[i % drugNames.length] + ' ' + (Math.floor(i / drugNames.length) + 1);
+    const indication = indications[Math.floor(Math.random() * indications.length)];
+    const moa = moas[Math.floor(Math.random() * moas.length)];
+    const phase = phases[Math.floor(Math.random() * phases.length)];
+    const dataset = phase === 'Approved' ? 'Approved Drugs' : 'Clinical Pipeline';
+    const sponsor = sponsors[Math.floor(Math.random() * sponsors.length)];
+    const brandName = phase === 'Approved' ? (drugName.substring(0, 5) + 'ra') : 'N/A';
+    const target = moa.replace(' Inhibitor', '').replace(' Receptor Agonist', '').replace(' Receptor Antagonist', '') + ' Protein';
+    const status = phase === 'Approved' ? 'Active' : (Math.random() > 0.3 ? 'Recruiting' : 'Completed');
+    const route = routes[Math.floor(Math.random() * routes.length)];
+
+    seedMedicines.push(
+      makeDrugData(
+        drugName,
+        indication,
+        moa,
+        phase,
+        dataset,
+        sponsor,
+        brandName,
+        target,
+        status,
+        route
+      )
+    );
+  }
+
   await prisma.medicine.createMany({
     data: seedMedicines,
   });
 
   console.log(`💊 Populated ${seedMedicines.length} medicine records containing 45 detail columns each.`);
+
+  // Trigger Elasticsearch reindexing dynamically
+  try {
+    console.log('🔄 Seeding complete. Triggering Elasticsearch indexing...');
+    const { execSync } = require('child_process');
+    execSync('npx ts-node prisma/reindex.ts', { stdio: 'inherit' });
+  } catch (esError) {
+    console.warn('⚠️ Elasticsearch reindexing was skipped or failed. Ensure your Elasticsearch container is running.');
+  }
+
   console.log('✅ Seeding completed.');
 }
 

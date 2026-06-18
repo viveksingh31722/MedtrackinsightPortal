@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import xlsx from 'xlsx';
 import { prisma } from '../config/prisma';
+import { esClient } from '../config/elasticsearch';
+import { env } from '../config/env';
 
 export const uploadMedicineSheet = async (req: Request, res: Response) => {
   try {
@@ -117,6 +119,16 @@ export const uploadMedicineSheet = async (req: Request, res: Response) => {
       completionMessage = `Append complete. Appended ${createdCount} new records to database.`;
     }
 
+    // Trigger background Elasticsearch re-index
+    try {
+      const { exec } = require('child_process');
+      exec('npx ts-node prisma/reindex.ts', (err: any) => {
+        if (err) console.error('Elasticsearch background re-indexing failed:', err);
+      });
+    } catch (esErr) {
+      console.warn('Failed to start background Elasticsearch indexing:', esErr);
+    }
+
     return res.status(200).json({
       message: completionMessage,
       recordsCount: createdCount + updatedCount,
@@ -142,6 +154,18 @@ export const deleteMedicine = async (req: Request, res: Response) => {
       where: { id },
     });
 
+    // Sync deletion to Elasticsearch
+    if (esClient) {
+      try {
+        await esClient.delete({
+          index: env.ELASTICSEARCH_INDEX,
+          id: id,
+        });
+      } catch (esError) {
+        console.warn('⚠️ Failed to delete document from Elasticsearch:', esError);
+      }
+    }
+
     return res.status(200).json({ message: `Successfully deleted molecule: ${existing.drugName}` });
   } catch (error) {
     console.error('Delete medicine error:', error);
@@ -153,6 +177,21 @@ export const deleteMedicine = async (req: Request, res: Response) => {
 export const clearAllMedicines = async (req: Request, res: Response) => {
   try {
     const deleted = await prisma.medicine.deleteMany({});
+
+    // Sync clear to Elasticsearch
+    if (esClient) {
+      try {
+        await esClient.deleteByQuery({
+          index: env.ELASTICSEARCH_INDEX,
+          body: {
+            query: { match_all: {} }
+          }
+        });
+      } catch (esError) {
+        console.warn('⚠️ Failed to clear Elasticsearch index:', esError);
+      }
+    }
+
     return res.status(200).json({ message: `Successfully cleared all data. ${deleted.count} records removed.` });
   } catch (error) {
     console.error('Clear catalog error:', error);

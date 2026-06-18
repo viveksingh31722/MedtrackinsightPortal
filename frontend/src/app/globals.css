@@ -34,12 +34,14 @@
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Outfit', system-ui, sans-serif;
   
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
   --radius: 12px;
-  --radius-sm: 6px;
+  --radius-sm: 8px;
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15);
 }
 
 * {
@@ -155,8 +157,13 @@ button, input, select, textarea {
   border-radius: var(--radius);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: var(--transition);
+  transition: var(--transition-smooth);
   white-space: nowrap;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn-primary {
@@ -166,7 +173,12 @@ button, input, select, textarea {
 
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
+  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.25), 0 2px 4px rgba(109, 40, 217, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-secondary {
@@ -176,19 +188,30 @@ button, input, select, textarea {
 
 .btn-secondary:hover {
   background-color: var(--secondary-hover);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25), 0 2px 4px rgba(37, 99, 235, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-outline {
-  background-color: transparent;
+  background-color: var(--bg-surface);
   border-color: var(--border);
   color: var(--text-muted);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .btn-outline:hover {
   background-color: var(--bg-alt);
   color: var(--text-main);
-  border-color: var(--text-muted);
+  border-color: #cbd5e1; /* slate-300 */
+  transform: translateY(-1px);
+}
+
+.btn-outline:active {
+  transform: translateY(1px) scale(0.97);
 }
 
 .btn-text {
@@ -199,6 +222,8 @@ button, input, select, textarea {
 
 .btn-text:hover {
   color: var(--primary);
+  background-color: var(--primary-light);
+  border-radius: var(--radius-sm);
 }
 
 .btn-sm {
@@ -245,12 +270,12 @@ button, input, select, textarea {
   border-radius: var(--radius);
   padding: 24px;
   box-shadow: var(--shadow-sm);
-  transition: var(--transition);
+  transition: var(--transition-spring);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(109, 40, 217, 0.08);
+  transform: translateY(-4px);
 }
 
 .badge {
@@ -399,13 +424,17 @@ button, input, select, textarea {
   font-size: 15px;
   color: var(--text-main);
   outline: none;
-  transition: var(--transition);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-input:hover {
+  border-color: #cbd5e1; /* slate-300 */
 }
 
 .form-input:focus {
   border-color: var(--primary);
   background-color: var(--bg-surface);
-  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.15);
+  box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.12);
 }
 
 .search-row-bottom {
@@ -548,12 +577,17 @@ button, input, select, textarea {
   border-bottom: none;
 }
 
+.data-table tr td {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
 .data-table tr:hover td {
-  background-color: var(--primary-light);
+  background-color: #F8F6FF; /* Very soft purple highlight */
 }
 
 .data-table tr.selected td {
-  background-color: var(--secondary-light);
+  background-color: #F5F3FF; /* violet-50 */
+  color: var(--primary);
 }
 
 .clickable-row {
@@ -601,7 +635,7 @@ button, input, select, textarea {
   overflow-y: auto;
   border-left: 1px solid var(--border);
   transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* ultra-smooth cinematic transition */
 }
 
 .detail-drawer.open {
@@ -704,17 +738,22 @@ button, input, select, textarea {
   gap: 24px;
   position: relative;
   box-shadow: var(--shadow-sm);
-  transition: var(--transition);
+  transition: var(--transition-spring);
 }
 
 .pricing-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
 }
 
 .pricing-card.popular {
   border-color: var(--primary);
-  box-shadow: 0 8px 24px rgba(109, 40, 217, 0.1);
+  box-shadow: 0 10px 30px -5px rgba(109, 40, 217, 0.15);
+}
+
+.pricing-card.popular:hover {
+  border-color: var(--primary-hover);
+  box-shadow: 0 20px 35px -5px rgba(109, 40, 217, 0.25);
 }
 
 .pricing-card.popular::before {

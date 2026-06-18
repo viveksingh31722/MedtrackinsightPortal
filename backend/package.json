@@ -8,12 +8,17 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
+    "es:reindex": "ts-node prisma/reindex.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.11.1",
     "@prisma/client": "^5.12.1",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",

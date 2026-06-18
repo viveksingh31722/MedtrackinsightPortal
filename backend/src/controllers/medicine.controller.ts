@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { verifyAccessToken } from '../utils/jwt';
+import { esClient, checkEsHealth } from '../config/elasticsearch';
+import { env } from '../config/env';
 
 // Helper to determine if a request has an active subscription
 const checkSubscriptionStatus = async (req: Request): Promise<boolean> => {
@@ -39,51 +41,119 @@ export const searchMedicines = async (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    // Build Prisma filtering logic
-    const whereClause: any = {};
+    let medicines: any[] = [];
+    let isEsUsed = false;
 
-    // Search query: Drug name, Indication, or MOA
-    if (query && query.toString().trim() !== '') {
-      const searchStr = query.toString().trim();
-      
-      if (field === 'drugName') {
-        whereClause.drugName = { contains: searchStr };
-      } else if (field === 'indication') {
-        whereClause.indication = { contains: searchStr };
-      } else if (field === 'moa') {
-        whereClause.moa = { contains: searchStr };
-      } else {
-        whereClause.OR = [
-          { drugName: { contains: searchStr } },
-          { indication: { contains: searchStr } },
-          { moa: { contains: searchStr } },
-        ];
+    // Resilient search approach: Attempt Elasticsearch query if healthy, fallback to Postgres
+    const isEsHealthy = await checkEsHealth();
+    if (isEsHealthy && esClient && query && query.toString().trim() !== '') {
+      try {
+        const searchStr = query.toString().trim();
+        const queryBody: any = {
+          query: {
+            bool: {
+              must: []
+            }
+          },
+          size: 10000 // Fetch matching doc IDs to slice/sort
+        };
+
+        if (field === 'drugName') {
+          queryBody.query.bool.must.push({
+            match: { drugName: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else if (field === 'indication') {
+          queryBody.query.bool.must.push({
+            match: { indication: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else if (field === 'moa') {
+          queryBody.query.bool.must.push({
+            match: { moa: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else {
+          queryBody.query.bool.must.push({
+            multi_match: {
+              query: searchStr,
+              fields: ['drugName^3', 'indication^2', 'moa'],
+              fuzziness: 'AUTO'
+            }
+          });
+        }
+
+        if (dataset) {
+          queryBody.query.bool.must.push({
+            term: { dataset: dataset }
+          });
+        }
+
+        console.log(`🔍 Querying Elasticsearch for search string: "${searchStr}"...`);
+        const searchResponse = await esClient.search({
+          index: env.ELASTICSEARCH_INDEX,
+          body: queryBody
+        });
+
+        const hits = searchResponse.hits.hits;
+        const docIds = hits.map((hit: any) => hit._id);
+
+        if (docIds.length > 0) {
+          const matchedMedicines = await prisma.medicine.findMany({
+            where: { id: { in: docIds } }
+          });
+
+          const medicinesMap = new Map(matchedMedicines.map(m => [m.id, m]));
+          medicines = docIds
+            .map(id => medicinesMap.get(id))
+            .filter(Boolean) as typeof matchedMedicines;
+          isEsUsed = true;
+          console.log(`✅ Elasticsearch search returned ${medicines.length} ordered records.`);
+        }
+      } catch (esError) {
+        console.error('⚠️ Elasticsearch query failed, falling back to database search:', esError);
       }
     }
 
-    // Fetch all matched rows
-    let medicines = await prisma.medicine.findMany({
-      where: whereClause,
-      orderBy: { drugName: 'asc' },
-    });
+    // Fallback direct Prisma search
+    if (!isEsUsed) {
+      console.log('🔌 Running direct database search query fallback...');
+      const whereClause: any = {};
 
-    // In-memory dataset filter (compatible with SQLite JSON strings)
-    if (dataset) {
-      medicines = medicines.filter((med) => {
-        try {
-          const additional = JSON.parse(med.additionalData || '{}');
-          return additional.dataset === dataset;
-        } catch {
-          return false;
+      if (query && query.toString().trim() !== '') {
+        const searchStr = query.toString().trim();
+        if (field === 'drugName') {
+          whereClause.drugName = { contains: searchStr };
+        } else if (field === 'indication') {
+          whereClause.indication = { contains: searchStr };
+        } else if (field === 'moa') {
+          whereClause.moa = { contains: searchStr };
+        } else {
+          whereClause.OR = [
+            { drugName: { contains: searchStr } },
+            { indication: { contains: searchStr } },
+            { moa: { contains: searchStr } },
+          ];
         }
+      }
+
+      medicines = await prisma.medicine.findMany({
+        where: whereClause,
+        orderBy: { drugName: 'asc' },
       });
+
+      if (dataset) {
+        medicines = medicines.filter((med) => {
+          try {
+            const additional = JSON.parse(med.additionalData || '{}');
+            return additional.dataset === dataset;
+          } catch {
+            return false;
+          }
+        });
+      }
     }
 
-    // In-memory pagination slicing
     const total = medicines.length;
     const paginatedMedicines = medicines.slice(skip, skip + limitNum);
 
-    // Scrub details columns from result list if user is a guest/non-subscriber
     const processedMedicines = paginatedMedicines.map((med) => {
       let additional: any = {};
       try {
@@ -127,6 +197,7 @@ export const searchMedicines = async (req: Request, res: Response) => {
         limit: limitNum,
         totalPages: Math.ceil(total / limitNum),
         isSubscribed,
+        searchDriver: isEsUsed ? 'elasticsearch' : 'database'
       },
     });
   } catch (error) {
@@ -210,35 +281,107 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
     }
 
     const { query, field, dataset } = req.query;
-    const whereClause: any = {};
-    if (query && query.toString().trim() !== '') {
-      const searchStr = query.toString().trim();
-      if (field === 'drugName') {
-        whereClause.drugName = { contains: searchStr };
-      } else if (field === 'indication') {
-        whereClause.indication = { contains: searchStr };
-      } else if (field === 'moa') {
-        whereClause.moa = { contains: searchStr };
-      } else {
-        whereClause.OR = [
-          { drugName: { contains: searchStr } },
-          { indication: { contains: searchStr } },
-          { moa: { contains: searchStr } },
-        ];
+    let medicines: any[] = [];
+    let isEsUsed = false;
+
+    // Resilient search approach: Attempt Elasticsearch query if healthy, fallback to Postgres
+    const isEsHealthy = await checkEsHealth();
+    if (isEsHealthy && esClient && query && query.toString().trim() !== '') {
+      try {
+        const searchStr = query.toString().trim();
+        const queryBody: any = {
+          query: {
+            bool: {
+              must: []
+            }
+          },
+          size: 10000 // Get all matches for export
+        };
+
+        if (field === 'drugName') {
+          queryBody.query.bool.must.push({
+            match: { drugName: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else if (field === 'indication') {
+          queryBody.query.bool.must.push({
+            match: { indication: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else if (field === 'moa') {
+          queryBody.query.bool.must.push({
+            match: { moa: { query: searchStr, fuzziness: 'AUTO' } }
+          });
+        } else {
+          queryBody.query.bool.must.push({
+            multi_match: {
+              query: searchStr,
+              fields: ['drugName^3', 'indication^2', 'moa'],
+              fuzziness: 'AUTO'
+            }
+          });
+        }
+
+        if (dataset) {
+          queryBody.query.bool.must.push({
+            term: { dataset: dataset }
+          });
+        }
+
+        const searchResponse = await esClient.search({
+          index: env.ELASTICSEARCH_INDEX,
+          body: queryBody
+        });
+
+        const hits = searchResponse.hits.hits;
+        const docIds = hits.map((hit: any) => hit._id);
+
+        if (docIds.length > 0) {
+          const matchedMedicines = await prisma.medicine.findMany({
+            where: { id: { in: docIds } }
+          });
+
+          const medicinesMap = new Map(matchedMedicines.map(m => [m.id, m]));
+          medicines = docIds
+            .map(id => medicinesMap.get(id))
+            .filter(Boolean) as typeof matchedMedicines;
+          isEsUsed = true;
+        }
+      } catch (esError) {
+        console.error('⚠️ Elasticsearch query failed in CSV export, falling back to database search:', esError);
       }
     }
 
-    let medicines = await prisma.medicine.findMany({ where: whereClause });
-
-    if (dataset) {
-      medicines = medicines.filter((med) => {
-        try {
-          const additional = JSON.parse(med.additionalData || '{}');
-          return additional.dataset === dataset;
-        } catch {
-          return false;
+    // Fallback direct Prisma search
+    if (!isEsUsed) {
+      const whereClause: any = {};
+      if (query && query.toString().trim() !== '') {
+        const searchStr = query.toString().trim();
+        if (field === 'drugName') {
+          whereClause.drugName = { contains: searchStr };
+        } else if (field === 'indication') {
+          whereClause.indication = { contains: searchStr };
+        } else if (field === 'moa') {
+          whereClause.moa = { contains: searchStr };
+        } else {
+          whereClause.OR = [
+            { drugName: { contains: searchStr } },
+            { indication: { contains: searchStr } },
+            { moa: { contains: searchStr } },
+          ];
         }
-      });
+      }
+
+      medicines = await prisma.medicine.findMany({ where: whereClause });
+
+      if (dataset) {
+        medicines = medicines.filter((med) => {
+          try {
+            const additional = JSON.parse(med.additionalData || '{}');
+            return additional.dataset === dataset;
+          } catch {
+            return false;
+          }
+        });
+      }
     }
     
     const exportSize = medicines.length;

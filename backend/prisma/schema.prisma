@@ -5,9 +5,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Configured for local SQLite sandboxing
+// Configured for local PostgreSQL database
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
