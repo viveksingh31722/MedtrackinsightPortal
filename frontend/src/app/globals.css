@@ -50,12 +50,43 @@
   margin: 0;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
   font-family: var(--font-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Global Modern Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px; /* Slim vertical scrollbar */
+  height: 10px; /* Slim horizontal scrollbar */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main); /* Match main page background */
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.25); /* Soft premium purple thumb */
+  border-radius: 9999px;
+  border: 2.5px solid var(--bg-main); /* Border margin space */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary); /* Vibrant theme purple on hover */
+}
+
+/* Firefox compatibility styling */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 40, 217, 0.35) var(--bg-main);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -341,6 +372,44 @@ button, input, select, textarea {
   margin: 0 auto 40px;
 }
 
+/* Homepage Specific Hero Gradient Styling */
+.home-hero {
+  position: relative;
+  background: 
+    linear-gradient(180deg, rgba(250, 250, 252, 0) 50%, var(--bg-main) 100%),
+    linear-gradient(135deg, #43CBFF 0%, #9708CC 100%);
+  padding: 120px 0 100px;
+  color: #ffffff;
+}
+
+.home-hero .hero-subtitle {
+  color: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 16px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.home-hero .hero-title {
+  color: #ffffff !important;
+  font-size: 52px;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  margin-bottom: 24px;
+  letter-spacing: -0.03em;
+}
+
+.home-hero .hero-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 19px;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 48px;
+}
+
 /* Stats dashboard */
 .stats-grid {
   display: grid;
@@ -514,6 +583,8 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .grid-header-actions {
@@ -542,6 +613,31 @@ button, input, select, textarea {
   border-radius: var(--radius);
   overflow-x: auto;
   box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  width: 100%;
+  /* Standard CSS scrollbar styling for Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(109, 40, 217, 0.65) var(--bg-alt);
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 8px; /* Height of horizontal scrollbar */
+  display: block; /* Ensure it is rendered */
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: var(--bg-alt); /* Light contrast background */
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.65); /* Rich, clearly visible purple thumb */
+  border-radius: 4px;
+  border: 1.5px solid var(--bg-alt); /* Padding/inset appearance */
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--primary); /* Deep violet on hover */
 }
 
 .data-table {
@@ -1106,4 +1202,154 @@ button, input, select, textarea {
   background-color: var(--primary-light);
   color: var(--primary);
 }
+
+/* Responsive Layout Queries */
+@media (max-width: 1024px) {
+  .workspace-layout {
+    flex-direction: column;
+    gap: 32px;
+  }
+  .sidebar-filter {
+    width: 100% !important;
+    position: relative !important;
+    top: 0 !important;
+  }
+  .pricing-matrix {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    display: none !important; /* Hide navigation links on mobile/tablets, use hamburger drawer */
+  }
+  
+  .nav-buttons {
+    display: none !important;
+  }
+  
+  .header-inner {
+    padding: 0 !important;
+  }
+  
+  .hero-title {
+    font-size: 32px !important;
+  }
+  
+  .hero-description {
+    font-size: 16px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  .search-module {
+    padding: 20px !important;
+  }
+  
+  .search-row-top {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  .search-row-bottom {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .detail-drawer {
+    width: 100% !important;
+    padding: 24px !important;
+  }
+  
+  .meta-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .form-group {
+    width: 100% !important;
+  }
+
+  .search-form > div {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .search-form button {
+    width: 100% !important;
+  }
+
+  .grid-header-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+    text-align: center !important;
+  }
+
+  .grid-header-actions > div {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .column-manager-wrapper {
+    width: 100% !important;
+  }
+
+  .column-manager-wrapper button {
+    width: 100% !important;
+  }
+}
+
+/* Mobile drawer navigation styles */
+.mobile-nav-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text-main);
+  z-index: 1001;
+  outline: none;
+  transition: transform 0.2s ease;
+}
+
+.mobile-nav-toggle:active {
+  transform: scale(0.9);
+}
+
+@media (max-width: 768px) {
+  .mobile-nav-toggle {
+    display: block !important; /* Show hamburger button on mobile */
+  }
+}
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--bg-surface);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 1050;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  border-right: 1px solid var(--border);
+}
+
+.mobile-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 1040;
+}
+
 

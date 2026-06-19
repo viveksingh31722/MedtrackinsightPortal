@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from './context/AppContext';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const [field, setField] = useState('all');
-  const [dataset, setDataset] = useState('Approved Drugs');
+  const [dataset, setDataset] = useState('Pipeline Prospector');
   
   // Suggestions UI states
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -17,6 +18,8 @@ export default function HomePage() {
   // Database stats state
   const [stats, setStats] = useState({
     totalMedicines: 10,
+    totalPipeline: 0,
+    totalForecasting: 0,
     totalUsers: 3,
     totalDemos: 0,
   });
@@ -60,7 +63,6 @@ export default function HomePage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirect to search results page with queries
     const params = new URLSearchParams();
     if (query.trim() !== '') params.append('query', query.trim());
     if (field !== 'all') params.append('field', field);
@@ -71,23 +73,47 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="hero">
+      {/* Hero Section with custom modern gradient background */}
+      <section className="hero home-hero" style={{ overflow: 'hidden' }}>
         <div className="container">
-          <span className="hero-subtitle">High-Fidelity R&amp;D Platform</span>
-          <h1 className="hero-title">
+          <motion.span 
+            className="hero-subtitle"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+          >
+            High-Fidelity R&amp;D Platform
+          </motion.span>
+          
+          <motion.h1 
+            className="hero-title"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 100, delay: 0.2 }}
+          >
             Search, Filter, and Benchmark Global Molecular Pipelines
-          </h1>
-          <p className="hero-description">
+          </motion.h1>
+          
+          <motion.p 
+            className="hero-description"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
             Access exhaustive clinical and chemical details across {stats.totalMedicines + 240} FDA &amp; EMA pipelines. Seamlessly search by drug, indication, or MOA.
-          </p>
+          </motion.p>
 
           {/* Search Module Form */}
-          <div className="search-module">
+          <motion.div 
+            className="search-module"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 80, delay: 0.4 }}
+          >
             <form onSubmit={handleSearchSubmit} className="search-form">
               <div className="search-row-top">
                 
-                {/* Dataset selection dropdown (Satisfying "Drop down by 2 files") */}
+                {/* Dataset selection dropdown */}
                 <div className="form-group">
                   <label htmlFor="dataset" className="form-label">Select Source File</label>
                   <select
@@ -96,8 +122,8 @@ export default function HomePage() {
                     onChange={(e) => setDataset(e.target.value)}
                     className="form-input"
                   >
-                    <option value="Approved Drugs">Approved Drugs (FDA)</option>
-                    <option value="Clinical Pipeline">Clinical Pipeline (Phase I-III)</option>
+                    <option value="Pipeline Prospector">Pipeline Prospector</option>
+                    <option value="Patent & Sales Forecasting">Patent & Sales Forecasting</option>
                   </select>
                 </div>
 
@@ -176,51 +202,80 @@ export default function HomePage() {
                 <button type="button" onClick={() => { setQuery(''); setField('all'); }} className="btn btn-outline">
                   Reset
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <motion.button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   Search Database
-                </button>
+                </motion.button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Metrics Banner */}
-      <section className="section" style={{ padding: '40px 0', backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '60px 0', backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div className="stats-grid">
-            <div className="stat-card">
+            <motion.div 
+              className="stat-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', delay: 0.1 }}
+            >
               <div className="stat-number">{stats.totalMedicines > 0 ? stats.totalMedicines : '12'}</div>
               <div className="stat-label">Active Molecules</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-number">45</div>
-              <div className="stat-label">Data Attributes / Row</div>
-            </div>
-            <div className="stat-card">
+            </motion.div>
+            <motion.div 
+              className="stat-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', delay: 0.2 }}
+            >
+              <div className="stat-number">94</div>
+              <div className="stat-label">Searchable Fields</div>
+            </motion.div>
+            <motion.div 
+              className="stat-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', delay: 0.3 }}
+            >
               <div className="stat-number">2</div>
-              <div className="stat-label">Reference Files</div>
-            </div>
-            <div className="stat-card">
+              <div className="stat-label">Domain Tables</div>
+            </motion.div>
+            <motion.div 
+              className="stat-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', delay: 0.4 }}
+            >
               <div className="stat-number">{stats.totalDemos > 0 ? stats.totalDemos : '15'}</div>
               <div className="stat-label">Demos Scheduled</div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* Pricing Teaser / Access Info */}
       <section className="section">
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center' }}>
+        <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '48px', alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: '32px', marginBottom: '20px' }}>Unlock Comprehensive Molecular Intelligence</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
               MedTrackInsight divides access seamlessly to accommodate all budgets. Guest searchers can inspect core indicators like molecule name, key therapeutic indication, and primary mechanism of action.
             </p>
             <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-              Subscribing to our Pro Plan instantly unlocks all 45 database columns including trial start dates, target molecules, molecular weights, chemical formulas, patent expiry metrics, and enables direct Excel/CSV downloads.
+              Subscribing to our Pro Plan instantly unlocks all 94 database columns including trial start dates, target molecules, molecular weights, chemical formulas, patent expiry metrics, and enables direct Excel/CSV downloads.
             </p>
-            <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <Link href="/subscription" className="btn btn-primary">
                 View Pricing Matrix
               </Link>
@@ -230,18 +285,27 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="card">
+            <motion.div 
+              className="card"
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+            >
               <h3 style={{ fontSize: '18px', marginBottom: '10px', color: 'var(--primary)' }}>Guest Search (Free)</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                 Inspect search results with standard column details: Drug Name, Indication, Mechanism of Action (MOA), and Trial Development Phase.
               </p>
-            </div>
-            <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
+            </motion.div>
+            <motion.div 
+              className="card" 
+              style={{ borderLeft: '4px solid var(--primary)' }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+            >
               <h3 style={{ fontSize: '18px', marginBottom: '10px', color: 'var(--primary)' }}>Pro Plan Access ($1499/mo)</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                Unlock all 45 data attributes, details sidebar roadmaps, sponsor listings, molecular formulas, and export lists (up to 2,000 downloads/month).
+                Unlock all 94 data attributes, details sidebar roadmaps, sponsor listings, molecular formulas, and export lists (up to 2,000 downloads/month).
               </p>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

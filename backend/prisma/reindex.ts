@@ -7,7 +7,6 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const ELASTICSEARCH_NODE = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
-const ELASTICSEARCH_INDEX = process.env.ELASTICSEARCH_INDEX || 'medicines';
 
 const prisma = new PrismaClient();
 const esClient = new Client({
@@ -15,7 +14,7 @@ const esClient = new Client({
 });
 
 async function runReindexing() {
-  console.log('🔄 Starting Elasticsearch reindexing process...');
+  console.log('🔄 Starting Elasticsearch reindexing process for Pipeline & Forecasting...');
 
   try {
     // 1. Verify ES connectivity
@@ -25,104 +24,121 @@ async function runReindexing() {
     }
     console.log('✅ Connected to Elasticsearch.');
 
-    // 2. Check if index exists, and delete it to reset mappings
-    const indexExists = await esClient.indices.exists({ index: ELASTICSEARCH_INDEX });
-    if (indexExists) {
-      console.log(`🗑️ Index "${ELASTICSEARCH_INDEX}" already exists. Deleting it for a clean rebuild.`);
-      await esClient.indices.delete({ index: ELASTICSEARCH_INDEX });
-    }
+    const indices = ['pipeline_prospector', 'patent_sales_forecasting'];
 
-    // 3. Create index with custom mappings
-    console.log(`🛠️ Creating index "${ELASTICSEARCH_INDEX}" with custom search mappings...`);
-    await esClient.indices.create({
-      index: ELASTICSEARCH_INDEX,
-      settings: {
-        analysis: {
-          analyzer: {
-            drug_search_analyzer: {
-              type: 'custom',
-              tokenizer: 'standard',
-              filter: ['lowercase', 'asciifolding'],
+    for (const indexName of indices) {
+      const indexExists = await esClient.indices.exists({ index: indexName });
+      if (indexExists) {
+        console.log(`🗑️ Index "${indexName}" already exists. Deleting it for a clean rebuild.`);
+        await esClient.indices.delete({ index: indexName });
+      }
+
+      console.log(`🛠️ Creating index "${indexName}" with custom search mappings...`);
+      
+      const properties: any = {
+        id: { type: 'keyword' },
+        createdAt: { type: 'date' },
+      };
+
+      if (indexName === 'pipeline_prospector') {
+        // Pipeline mappings
+        properties.leadDrug = { 
+          type: 'text', 
+          analyzer: 'drug_search_analyzer',
+          fields: { keyword: { type: 'keyword' } }
+        };
+        properties.primaryIndication = { type: 'text', analyzer: 'drug_search_analyzer' };
+        properties.mechanismOfAction = { type: 'text', analyzer: 'drug_search_analyzer' };
+        properties.developmentPhase = { type: 'keyword' };
+        properties.sponsor = { type: 'text', fields: { keyword: { type: 'keyword' } } };
+        properties.routeOfAdministration = { type: 'text' };
+        properties.country = { type: 'keyword' };
+        
+        // Add other key columns that we want searchable or filterable
+        properties.companyName = { type: 'text' };
+        properties.nctNumber = { type: 'keyword' };
+        properties.trialStatus = { type: 'keyword' };
+        properties.moleculeType = { type: 'keyword' };
+        properties.orphanDrugStatus = { type: 'keyword' };
+        properties.fastTrackApproval = { type: 'keyword' };
+      } else {
+        // Patent & Forecasting mappings
+        properties.activeIngredient = { 
+          type: 'text', 
+          analyzer: 'drug_search_analyzer',
+          fields: { keyword: { type: 'keyword' } }
+        };
+        properties.brandName = { 
+          type: 'text', 
+          analyzer: 'drug_search_analyzer',
+          fields: { keyword: { type: 'keyword' } }
+        };
+        properties.moa = { type: 'text', analyzer: 'drug_search_analyzer' };
+        properties.indicationApproved = { type: 'text', analyzer: 'drug_search_analyzer' };
+        properties.applicant = { type: 'text', fields: { keyword: { type: 'keyword' } } };
+        properties.roa = { type: 'text' };
+        properties.country = { type: 'keyword' };
+        
+        properties.patentNumber = { type: 'keyword' };
+        properties.patentExpiryDate = { type: 'keyword' };
+      }
+
+      await esClient.indices.create({
+        index: indexName,
+        settings: {
+          analysis: {
+            analyzer: {
+              drug_search_analyzer: {
+                type: 'custom',
+                tokenizer: 'standard',
+                filter: ['lowercase', 'asciifolding'],
+              },
             },
           },
         },
-      },
-      mappings: {
-        properties: {
-          id: { type: 'keyword' },
-          drugName: { 
-            type: 'text', 
-            analyzer: 'drug_search_analyzer',
-            fields: {
-              keyword: { type: 'keyword' }
-            }
-          },
-          indication: { type: 'text', analyzer: 'drug_search_analyzer' },
-          moa: { type: 'text', analyzer: 'drug_search_analyzer' },
-          phase: { type: 'keyword' },
-          dataset: { type: 'keyword' },
-          sponsor: { type: 'text' },
-          brandName: { type: 'text' },
-          target: { type: 'text' },
-          status: { type: 'keyword' },
-          route: { type: 'text' },
-          country: { type: 'keyword' },
-          createdAt: { type: 'date' },
-          additionalData: { type: 'text', index: false } // Stored only, not searchable raw JSON string
+        mappings: {
+          properties
         },
-      },
-    });
-    console.log('✅ Index created.');
-
-    // 4. Fetch all data from Postgres
-    console.log('📥 Fetching medicine records from PostgreSQL...');
-    const medicines = await prisma.medicine.findMany({});
-    console.log(`✅ Loaded ${medicines.length} records from PostgreSQL.`);
-
-    if (medicines.length === 0) {
-      console.warn('⚠️ No medicine records found in PostgreSQL. Seeding may be required.');
-      return;
+      });
+      console.log(`✅ Index "${indexName}" created.`);
     }
 
-    // 5. Bulk index documents
-    console.log('📤 Bulk indexing documents into Elasticsearch...');
-    const body = medicines.flatMap((med) => {
-      let additional: any = {};
-      try {
-        additional = JSON.parse(med.additionalData || '{}');
-      } catch {
-        additional = {};
+    // 4. Fetch and Index PipelineProspector data
+    console.log('📥 Fetching PipelineProspector records from PostgreSQL...');
+    const pipelineRecords = await prisma.pipelineProspector.findMany({});
+    console.log(`✅ Loaded ${pipelineRecords.length} records.`);
+
+    if (pipelineRecords.length > 0) {
+      console.log('📤 Bulk indexing PipelineProspector records...');
+      const body = pipelineRecords.flatMap((rec) => [
+        { index: { _index: 'pipeline_prospector', _id: rec.id } },
+        rec
+      ]);
+      const bulkResponse = await esClient.bulk({ refresh: true, body });
+      if (bulkResponse.errors) {
+        console.error('❌ Errors occurred during pipeline bulk indexing:');
+      } else {
+        console.log(`🎉 Successfully indexed ${pipelineRecords.length} pipeline records!`);
       }
+    }
 
-      return [
-        { index: { _index: ELASTICSEARCH_INDEX, _id: med.id } },
-        {
-          id: med.id,
-          drugName: med.drugName,
-          indication: med.indication,
-          moa: med.moa,
-          phase: additional.phase || 'N/A',
-          dataset: additional.dataset || 'Approved Drugs',
-          sponsor: additional.sponsor || 'N/A',
-          brandName: additional.brandName || 'N/A',
-          target: additional.target || 'N/A',
-          status: additional.status || 'Active',
-          route: additional.route || 'N/A',
-          country: additional.country || 'US',
-          createdAt: med.createdAt,
-          additionalData: med.additionalData
-        }
-      ];
-    });
+    // 5. Fetch and Index PatentSalesForecasting data
+    console.log('📥 Fetching PatentSalesForecasting records from PostgreSQL...');
+    const forecastingRecords = await prisma.patentSalesForecasting.findMany({});
+    console.log(`✅ Loaded ${forecastingRecords.length} records.`);
 
-    const bulkResponse = await esClient.bulk({ refresh: true, body });
-
-    if (bulkResponse.errors) {
-      console.error('❌ Some errors occurred during bulk indexing:');
-      const erroredItems = bulkResponse.items.filter((item: any) => item.index && item.index.error);
-      console.error(erroredItems.slice(0, 5));
-    } else {
-      console.log(`🎉 Successfully indexed ${medicines.length} medicine profiles into Elasticsearch!`);
+    if (forecastingRecords.length > 0) {
+      console.log('📤 Bulk indexing PatentSalesForecasting records...');
+      const body = forecastingRecords.flatMap((rec) => [
+        { index: { _index: 'patent_sales_forecasting', _id: rec.id } },
+        rec
+      ]);
+      const bulkResponse = await esClient.bulk({ refresh: true, body });
+      if (bulkResponse.errors) {
+        console.error('❌ Errors occurred during forecasting bulk indexing:');
+      } else {
+        console.log(`🎉 Successfully indexed ${forecastingRecords.length} forecasting records!`);
+      }
     }
 
   } catch (error) {

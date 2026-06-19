@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function SearchResultsContent() {
   const searchParams = useSearchParams();
@@ -12,7 +13,7 @@ function SearchResultsContent() {
   // Search parameters from URL
   const queryParam = searchParams.get('query') || '';
   const fieldParam = searchParams.get('field') || 'all';
-  const datasetParam = searchParams.get('dataset') || 'Approved Drugs';
+  const datasetParam = searchParams.get('dataset') || 'Pipeline Prospector';
 
   const ALL_COUNTRIES = ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'];
   const ALL_DISEASES = ['Fever', 'Cold/Cough', 'Asthma'];
@@ -85,6 +86,21 @@ function SearchResultsContent() {
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([]);
   const [selectedSponsors, setSelectedSponsors] = useState<string[]>([]);
 
+  // Prevent background scrolling and hide main page scrollbar when details drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
+
   // Autocomplete fetcher
   useEffect(() => {
     if (query.trim() === '') {
@@ -135,7 +151,14 @@ function SearchResultsContent() {
         diseases: currentDiseases.join(','),
       });
 
+      const token = localStorage.getItem('accessToken');
+      const headers: any = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${apiBaseUrl}/medicine/search?${params.toString()}`, {
+        headers,
         //@ts-ignore
         credentials: 'include',
       });
@@ -237,11 +260,18 @@ function SearchResultsContent() {
   const filteredMedicines = medicines.filter((med) => {
     const additional = med.additionalData || {};
     
-    // 1. Phase Filter
+    // 1. Phase or Therapeutic Area Filter
     if (selectedPhases.length > 0) {
-      const medPhase = med.phase || additional.phase || 'N/A';
-      if (!selectedPhases.some(p => medPhase.toLowerCase().includes(p.toLowerCase()))) {
-        return false;
+      if (datasetParam === 'Pipeline Prospector') {
+        const medPhase = med.phase || additional.phase || 'N/A';
+        if (!selectedPhases.some(p => medPhase.toLowerCase().includes(p.toLowerCase()))) {
+          return false;
+        }
+      } else {
+        const medTA = additional.therapeuticArea || 'N/A';
+        if (!selectedPhases.some(t => medTA.toLowerCase().includes(t.toLowerCase()))) {
+          return false;
+        }
       }
     }
 
@@ -458,8 +488,8 @@ function SearchResultsContent() {
                 className="form-input"
                 style={{ height: '42px' }}
               >
-                <option value="Approved Drugs">Approved Drugs (FDA)</option>
-                <option value="Clinical Pipeline">Clinical Pipeline</option>
+                <option value="Pipeline Prospector">Pipeline Prospector</option>
+                <option value="Patent & Sales Forecasting">Patent & Sales Forecasting</option>
               </select>
             </div>
             <button type="submit" className="btn btn-primary" style={{ height: '42px', padding: '0 24px' }}>
@@ -654,21 +684,39 @@ function SearchResultsContent() {
             </div>
           </div>
 
-          <div className="filter-section">
-            <h4 className="filter-title">Development Phase</h4>
-            <div className="filter-options">
-              {['Approved', 'Phase III', 'Phase II', 'Phase I'].map((phase) => (
-                <label key={phase} className="filter-option">
-                  <input
-                    type="checkbox"
-                    checked={selectedPhases.includes(phase)}
-                    onChange={() => handlePhaseChange(phase)}
-                  />
-                  <span>{phase}</span>
-                </label>
-              ))}
+          {datasetParam === 'Pipeline Prospector' ? (
+            <div className="filter-section">
+              <h4 className="filter-title">Development Phase</h4>
+              <div className="filter-options">
+                {['Approved', 'Phase III', 'Phase II', 'Phase I'].map((phase) => (
+                  <label key={phase} className="filter-option">
+                    <input
+                      type="checkbox"
+                      checked={selectedPhases.includes(phase)}
+                      onChange={() => handlePhaseChange(phase)}
+                    />
+                    <span>{phase}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="filter-section">
+              <h4 className="filter-title">Therapeutic Area</h4>
+              <div className="filter-options">
+                {['Oncology', 'Immunology', 'Neurology', 'Cardiovascular'].map((ta) => (
+                  <label key={ta} className="filter-option">
+                    <input
+                      type="checkbox"
+                      checked={selectedPhases.includes(ta)}
+                      onChange={() => handlePhaseChange(ta)}
+                    />
+                    <span>{ta}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="filter-section">
             <h4 className="filter-title">Administration Route</h4>
@@ -687,7 +735,9 @@ function SearchResultsContent() {
           </div>
 
           <div className="filter-section">
-            <h4 className="filter-title">Leading Sponsors</h4>
+            <h4 className="filter-title">
+              {datasetParam === 'Pipeline Prospector' ? 'Leading Sponsors' : 'Applicants'}
+            </h4>
             <div className="filter-options">
               {['Merck & Co.', 'Novo Nordisk', 'AbbVie', 'Eli Lilly', 'Boehringer Ingelheim', 'Eisai & Biogen', 'GSK'].map((sponsor) => (
                 <label key={sponsor} className="filter-option">
@@ -853,10 +903,17 @@ function SearchResultsContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMedicines.map((med) => {
+                  {filteredMedicines.map((med, idx) => {
                     const additional = med.additionalData || {};
                     return (
-                      <tr key={med.id} onClick={() => handleRowClick(med)} className="clickable-row">
+                      <motion.tr 
+                        key={med.id} 
+                        onClick={() => handleRowClick(med)} 
+                        className="clickable-row"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.3) }}
+                      >
                         <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
                           {med.drugName}
                           <span 
@@ -899,7 +956,7 @@ function SearchResultsContent() {
                         {meta.isSubscribed && visibleColumns.moleculeType && <td>{additional.moleculeType || 'N/A'}</td>}
                         {meta.isSubscribed && visibleColumns.patentExpiry && <td>{additional.patentExpiry || 'N/A'}</td>}
                         {meta.isSubscribed && visibleColumns.molecularWeight && <td>{additional.molecularWeight || 'N/A'}</td>}
-                      </tr>
+                      </motion.tr>
                     );
                   })}
                 </tbody>
@@ -948,166 +1005,179 @@ function SearchResultsContent() {
         </section>
       </div>
 
-      {/* Right Details Drawer Layout */}
-      {selectedDrug && (
-        <>
-          <div className={`drawer-overlay ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)}></div>
-          <div className={`detail-drawer ${drawerOpen ? 'open' : ''}`}>
-            
-            <div className="drawer-header">
-              <div>
-                <span className="badge badge-info" style={{ marginBottom: '8px' }}>
-                  {selectedDrug.additionalData?.dataset || 'FDA Register'}
-                </span>
-                <h3 style={{ fontSize: '24px', color: 'var(--primary)' }}>
-                  {selectedDrug.drugName}
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  🧬 {selectedDrug.moa}
-                </p>
-              </div>
-              <button className="drawer-close" onClick={() => setDrawerOpen(false)}>
-                &times;
-              </button>
-            </div>
-
-            {/* Check subscription details masking */}
-            {selectedDrug.additionalData?.locked ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center', marginTop: '40px' }}>
-                <span style={{ fontSize: '40px' }}>🔒</span>
-                <h4 style={{ fontSize: '18px', fontWeight: 700 }}>
-                  Detailed Molecule Specifications Locked
-                </h4>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                  Pro accounts get immediate access to timelines, full roadmap phases, CAS indices, molecular formulas, excretion path specs, and side effect studies.
-                </p>
-                <button
-                  onClick={() => { setDrawerOpen(false); router.push('/subscription'); }}
-                  className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '10px' }}
-                >
-                  Subscribe to Upgrade
+      {/* Right Details Drawer Layout wrapped with AnimatePresence */}
+      <AnimatePresence>
+        {drawerOpen && selectedDrug && (
+          <>
+            <motion.div 
+              className="drawer-overlay open"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDrawerOpen(false)}
+            />
+            <motion.div 
+              className="detail-drawer open"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            >
+              
+              <div className="drawer-header">
+                <div>
+                  <span className="badge badge-info" style={{ marginBottom: '8px' }}>
+                    {selectedDrug.additionalData?.dataset || 'FDA Register'}
+                  </span>
+                  <h3 style={{ fontSize: '24px', color: 'var(--primary)' }}>
+                    {selectedDrug.drugName}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    🧬 {selectedDrug.moa}
+                  </p>
+                </div>
+                <button className="drawer-close" onClick={() => setDrawerOpen(false)}>
+                  &times;
                 </button>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                
-                <div className="drawer-section">
-                  <h4 className="drawer-section-title">Therapeutic Profile</h4>
-                  <div className="meta-grid">
-                    <div className="meta-item">
-                      <span className="meta-label">Primary Indication</span>
-                      <span className="meta-value">{selectedDrug.indication}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Phase Level</span>
-                      <span className="meta-value">{selectedDrug.phase}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Sponsor</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.sponsor || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Brand Name</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.brandName || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Target Market</span>
-                      <span className="meta-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                        🌎 {selectedDrug.country || selectedDrug.additionalData?.country || 'US'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="drawer-section">
-                  <h4 className="drawer-section-title">Trial Timelines &amp; Roadmap</h4>
-                  <div className="meta-grid">
-                    <div className="meta-item">
-                      <span className="meta-label">Trial Status</span>
-                      <span className="meta-value">
-                        <span className="badge badge-success" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                          {selectedDrug.additionalData?.status || 'Active'}
+              {/* Check subscription details masking */}
+              {selectedDrug.additionalData?.locked ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center', marginTop: '40px' }}>
+                  <span style={{ fontSize: '40px' }}>🔒</span>
+                  <h4 style={{ fontSize: '18px', fontWeight: 700 }}>
+                    Detailed Molecule Specifications Locked
+                  </h4>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                    Pro accounts get immediate access to timelines, full roadmap phases, CAS indices, molecular formulas, excretion path specs, and side effect studies.
+                  </p>
+                  <button
+                    onClick={() => { setDrawerOpen(false); router.push('/subscription'); }}
+                    className="btn btn-primary"
+                    style={{ width: '100%', marginTop: '10px' }}
+                  >
+                    Subscribe to Upgrade
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  
+                  <div className="drawer-section">
+                    <h4 className="drawer-section-title">Therapeutic Profile</h4>
+                    <div className="meta-grid">
+                      <div className="meta-item">
+                        <span className="meta-label">Primary Indication</span>
+                        <span className="meta-value">{selectedDrug.indication}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Phase Level</span>
+                        <span className="meta-value">{selectedDrug.phase}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Sponsor</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.sponsor || 'N/A'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Brand Name</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.brandName || 'N/A'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Target Market</span>
+                        <span className="meta-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                          🌎 {selectedDrug.country || selectedDrug.additionalData?.country || 'US'}
                         </span>
-                      </span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Target Completion</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.completionDate || '2025-12-15'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Trial ID Reference</span>
-                      <span className="meta-value" style={{ fontFamily: 'monospace', color: 'var(--secondary)' }}>
-                        {selectedDrug.additionalData?.trialId || 'NCT03982845'}
-                      </span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Enrollment Target</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.estimatedEnrollment || '450'} patients</span>
+                      </div>
                     </div>
                   </div>
+
+                  <div className="drawer-section">
+                    <h4 className="drawer-section-title">Trial Timelines &amp; Roadmap</h4>
+                    <div className="meta-grid">
+                      <div className="meta-item">
+                        <span className="meta-label">Trial Status</span>
+                        <span className="meta-value">
+                          <span className="badge badge-success" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                            {selectedDrug.additionalData?.status || 'Active'}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Target Completion</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.completionDate || '2025-12-15'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Trial ID Reference</span>
+                        <span className="meta-value" style={{ fontFamily: 'monospace', color: 'var(--secondary)' }}>
+                          {selectedDrug.additionalData?.trialId || 'NCT03982845'}
+                        </span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Enrollment Target</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.estimatedEnrollment || '450'} patients</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="drawer-section">
+                    <h4 className="drawer-section-title">Chemical &amp; Biological Specs</h4>
+                    <div className="meta-grid">
+                      <div className="meta-item">
+                        <span className="meta-label">Biological Target</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.target || 'N/A'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Structure / Type</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.moleculeType || 'Monoclonal Antibody'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Patent Expiry</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.patentExpiry || 'N/A'}</span>
+                      </div>
+                      <div className="meta-item">
+                        <span className="meta-label">Molecular Weight</span>
+                        <span className="meta-value">{selectedDrug.additionalData?.molecularWeight || 'N/A'}</span>
+                      </div>
+                      <div className="meta-item" style={{ gridColumn: 'span 2' }}>
+                        <span className="meta-label">Chemical Formula</span>
+                        <span className="meta-value" style={{ fontFamily: 'monospace' }}>
+                          {selectedDrug.additionalData?.chemicalFormula || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="drawer-section">
+                    <h4 className="drawer-section-title">Safety &amp; Compliance</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <span className="meta-label">Known Side Effects</span>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {selectedDrug.additionalData?.sideEffects || 'Fatigue, headaches, rash, mild nausea'}
+                        </p>
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        <span className="meta-label">Contraindications</span>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {selectedDrug.additionalData?.contraindications || 'Hypersensitivity to the active substance.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quota details warning if Pro */}
+                  {user && (
+                    <div className="alert alert-success" style={{ fontSize: '12px', padding: '10px' }}>
+                      📊 <strong>Quota Monitor:</strong> You have exported <strong>{user.downloadCount}</strong> rows of your <strong>2,000</strong> row current monthly limit.
+                    </div>
+                  )}
+
                 </div>
+              )}
 
-                <div className="drawer-section">
-                  <h4 className="drawer-section-title">Chemical &amp; Biological Specs</h4>
-                  <div className="meta-grid">
-                    <div className="meta-item">
-                      <span className="meta-label">Biological Target</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.target || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Structure / Type</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.moleculeType || 'Monoclonal Antibody'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Patent Expiry</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.patentExpiry || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <span className="meta-label">Molecular Weight</span>
-                      <span className="meta-value">{selectedDrug.additionalData?.molecularWeight || 'N/A'}</span>
-                    </div>
-                    <div className="meta-item" style={{ gridColumn: 'span 2' }}>
-                      <span className="meta-label">Chemical Formula</span>
-                      <span className="meta-value" style={{ fontFamily: 'monospace' }}>
-                        {selectedDrug.additionalData?.chemicalFormula || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="drawer-section">
-                  <h4 className="drawer-section-title">Safety &amp; Compliance</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div>
-                      <span className="meta-label">Known Side Effects</span>
-                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {selectedDrug.additionalData?.sideEffects || 'Fatigue, headaches, rash, mild nausea'}
-                      </p>
-                    </div>
-                    <div style={{ marginTop: '4px' }}>
-                      <span className="meta-label">Contraindications</span>
-                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {selectedDrug.additionalData?.contraindications || 'Hypersensitivity to the active substance.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quota details warning if Pro */}
-                {user && (
-                  <div className="alert alert-success" style={{ fontSize: '12px', padding: '10px' }}>
-                    📊 <strong>Quota Monitor:</strong> You have exported <strong>{user.downloadCount}</strong> rows of your <strong>2,000</strong> row current monthly limit.
-                  </div>
-                )}
-
-              </div>
-            )}
-
-          </div>
-        </>
-      )}
-
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

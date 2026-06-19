@@ -23,17 +23,119 @@ model User {
   updatedAt       DateTime  @updatedAt
 }
 
-model Medicine {
-  id             String   @id @default(uuid())
-  drugName       String
-  indication     String
-  moa            String
-  additionalData String   // Stringified JSON for SQLite storage
-  createdAt      DateTime @default(now())
+model PipelineProspector {
+  id                          String   @id @default(uuid())
+  srNo                        String?
+  companyName                 String?
+  headQuarter                 String?
+  nctNumber                   String?
+  leadDrug                    String?
+  secondaryDrug               String?
+  primaryIndication           String?
+  therapeuticArea             String?
+  phases                      String?
+  developmentPhase            String?
+  startingDate                String?
+  completionDate              String?
+  predictionOfLaunching       String?
+  trialStatus                 String?
+  terminatedReason            String?
+  moleculeType                String?
+  moleculeClass               String?
+  researchCode                String?
+  mechanismOfAction           String?
+  targetBiomarker             String?
+  orphanDrugStatus            String?
+  fastTrackApproval           String?
+  lineOfTherapy               String?
+  title                       String?
+  licensee                    String?
+  country                     String?
+  licensor                    String?
+  licensorCountry             String?
+  upfrontPayment              String?
+  dealSizeMillion             String?
+  paymentMode                 String?
+  year                        String?
+  deals                       String?
+  dealsType                   String?
+  link                        String?
+  licensingAvailability       String?
+  contactPersonName           String?
+  designation                 String?
+  contactNo                   String?
+  emailIdLink                 String?
+  locations                   String?
+  country1                    String?
+  clinicalInvestigatorName    String?
+  contactEmail                String?
+  contactTel                  String?
+  gender                      String?
+  age                         String?
+  enrollment                  String?
+  fundedBy                    String?
+  studyType                   String?
+  indicationMarketSize2023    String?
+  epidemiology                String?
+  sponsor                     String?
+  collaboration               String?
+  studyResults                String?
+  outcomeMeasures             String?
+  originator                  String?
+  developer                   String?
+  technology                  String?
+  routeOfAdministration       String?
+  strength                    String?
+  dosageForm                  String?
+  patentInfo                  String?
+  lastUpdated                 String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 
-  @@index([drugName])
-  @@index([indication])
+  @@index([leadDrug])
+  @@index([primaryIndication])
+  @@index([mechanismOfAction])
+}
+
+model PatentSalesForecasting {
+  id                          String   @id @default(uuid())
+  applicationNumber           String?
+  patentNumber                String?
+  applicant                   String?
+  approvalDate                String?
+  patentExpiryDate            String?
+  brandName                   String?
+  activeIngredient            String?
+  moa                         String?
+  biomarker                   String?
+  lineOfTherapy               String?
+  roa                         String?
+  dose                        String?
+  indicationApproved          String?
+  therapeuticArea             String?
+  indicationUnderEvaluation   String?
+  rld                         String?
+  rs                          String?
+  country                     String?
+  sales2018                   String?
+  sales2019                   String?
+  sales2020                   String?
+  sales2021                   String?
+  sales2022                   String?
+  forecastingSales2023        String?
+  forecastingSales2024        String?
+  forecastingSales2025        String?
+  forecastingSales2026        String?
+  forecastingSales2027        String?
+  noOfCompetitors             String?
+  sources                     String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([activeIngredient])
+  @@index([brandName])
   @@index([moa])
+  @@index([indicationApproved])
 }
 
 model DemoRequest {

@@ -12,7 +12,7 @@ export default function AdminPage() {
   
   // Catalog listing
   const [medicines, setMedicines] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalMedicines: 0, totalUsers: 0, totalDemos: 0 });
+  const [stats, setStats] = useState({ totalMedicines: 0, totalPipeline: 0, totalForecasting: 0, totalUsers: 0, totalDemos: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
@@ -177,10 +177,14 @@ export default function AdminPage() {
       </div>
 
       {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
         <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{stats.totalMedicines}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Medicines in DB</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{stats.totalPipeline || 0}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Pipeline Records</div>
+        </div>
+        <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{stats.totalForecasting || 0}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Forecasting Records</div>
         </div>
         <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
           <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{stats.totalUsers}</div>

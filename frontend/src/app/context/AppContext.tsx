@@ -48,12 +48,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const checkSession = async () => {
     try {
       setLoading(true);
-      // Fetch current profile from backend. Since we set credentials: true, the browser
-      // automatically sends the HTTP-only cookies to the backend.
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${apiBaseUrl}/auth/me`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         // Force sending cookies
         //@ts-ignore
         credentials: 'include',
