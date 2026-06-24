@@ -1,3 +1,4 @@
+import { env } from './config/env';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -5,7 +6,6 @@ import { authRoutes } from './routes/auth.routes';
 import { medicineRoutes } from './routes/medicine.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { adminRoutes } from './routes/admin.routes';
-import { env } from './config/env';
 
 const app = express();
 

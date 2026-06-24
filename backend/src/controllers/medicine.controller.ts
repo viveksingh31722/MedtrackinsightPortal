@@ -122,8 +122,8 @@ export const searchMedicines = async (req: Request, res: Response) => {
     const { query, field, dataset, page = '1', limit = '10', countries, diseases } = req.query;
     const isSubscribed = await checkSubscriptionStatus(req);
 
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 10, 1), 100);
     const skip = (pageNum - 1) * limitNum;
 
     // Parse filters
@@ -153,7 +153,8 @@ export const searchMedicines = async (req: Request, res: Response) => {
     const isPipelineDataset = !dataset || String(dataset).toLowerCase().includes('pipeline') || String(dataset).toLowerCase().includes('prospector');
     const indexName = isPipelineDataset ? 'pipeline_prospector' : 'patent_sales_forecasting';
 
-    let records: any[] = [];
+    let paginated: any[] = [];
+    let total = 0;
     let isEsUsed = false;
 
     // 1. Resilient search: Elasticsearch query
@@ -167,7 +168,8 @@ export const searchMedicines = async (req: Request, res: Response) => {
               must: []
             }
           },
-          size: 10000
+          from: skip,
+          size: limitNum
         };
 
         if (isPipelineDataset) {
@@ -261,16 +263,21 @@ export const searchMedicines = async (req: Request, res: Response) => {
               where: { id: { in: docIds } }
             });
             const map = new Map(matched.map(m => [m.id, m]));
-            records = docIds.map(id => map.get(id)).filter(Boolean);
+            paginated = docIds.map(id => map.get(id)).filter(Boolean);
           } else {
             const matched = await prisma.patentSalesForecasting.findMany({
               where: { id: { in: docIds } }
             });
             const map = new Map(matched.map(m => [m.id, m]));
-            records = docIds.map(id => map.get(id)).filter(Boolean);
+            paginated = docIds.map(id => map.get(id)).filter(Boolean);
           }
+
+          total = typeof searchResponse.hits.total === 'number'
+            ? searchResponse.hits.total
+            : (searchResponse.hits.total as any)?.value || 0;
+
           isEsUsed = true;
-          console.log(`✅ Elasticsearch search returned ${records.length} ordered records.`);
+          console.log(`✅ Elasticsearch search returned ${paginated.length} ordered records.`);
         }
       } catch (esError) {
         console.error('⚠️ Elasticsearch query failed, falling back to database search:', esError);
@@ -334,21 +341,24 @@ export const searchMedicines = async (req: Request, res: Response) => {
         }));
       }
 
-      if (isPipelineDataset) {
-        records = await prisma.pipelineProspector.findMany({
-          where: whereClause,
-          orderBy: { leadDrug: 'asc' },
-        });
-      } else {
-        records = await prisma.patentSalesForecasting.findMany({
-          where: whereClause,
-          orderBy: { brandName: 'asc' },
-        });
-      }
-    }
+      total = await (isPipelineDataset
+        ? prisma.pipelineProspector.count({ where: whereClause })
+        : prisma.patentSalesForecasting.count({ where: whereClause }));
 
-    const total = records.length;
-    const paginated = records.slice(skip, skip + limitNum);
+      paginated = await (isPipelineDataset
+        ? prisma.pipelineProspector.findMany({
+            where: whereClause,
+            orderBy: { leadDrug: 'asc' },
+            skip,
+            take: limitNum,
+          })
+        : prisma.patentSalesForecasting.findMany({
+            where: whereClause,
+            orderBy: { brandName: 'asc' },
+            skip,
+            take: limitNum,
+          }));
+    }
 
     const processed = paginated.map((med) => {
       return isPipelineDataset 
@@ -494,20 +504,31 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
     }
 
     const exportSize = medicines.length;
-    if (user.downloadCount + exportSize > 2000) {
-      return res.status(429).json({
-        message: `This download contains ${exportSize} records, which would exceed your remaining quota of ${2000 - user.downloadCount} records.`,
-      });
+    if (exportSize === 0) {
+      return res.status(400).json({ message: 'No records matched your search query. Nothing to export.' });
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
+    const updateResult = await prisma.user.updateMany({
+      where: {
+        id: user.id,
+        downloadCount: {
+          lte: 2000 - exportSize,
+        },
+      },
       data: {
         downloadCount: {
           increment: exportSize,
         },
       },
     });
+
+    if (updateResult.count === 0) {
+      const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const currentCount = freshUser ? freshUser.downloadCount : user.downloadCount;
+      return res.status(429).json({
+        message: `This download contains ${exportSize} records, which would exceed your remaining quota of ${Math.max(0, 2000 - currentCount)} records.`,
+      });
+    }
 
     let csvContent = '';
     
@@ -661,84 +682,276 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
 
 export const getSuggestions = async (req: Request, res: Response) => {
   try {
-    const { query } = req.query;
+    const { query, category } = req.query;
     if (!query || query.toString().trim() === '') {
       return res.status(200).json({ suggestions: [] });
     }
-    const searchStr = query.toString().trim().toLowerCase();
-    
-    let suggestions: Array<{ type: 'medicine' | 'disease' | 'country', text: string }> = [];
-    
-    // 1. Predefined Country suggestions
-    const ALL_COUNTRIES = ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'];
-    ALL_COUNTRIES.forEach(c => {
-      if (c.toLowerCase().includes(searchStr)) {
-        suggestions.push({ type: 'country', text: c });
-      }
-    });
-    
-    // 2. Predefined Disease suggestions
-    const DISEASES = ['Fever', 'Cold/Cough', 'Asthma'];
-    DISEASES.forEach(d => {
-      if (d.toLowerCase().includes(searchStr)) {
-        suggestions.push({ type: 'disease', text: d });
-      }
-    });
+    const searchStr = query.toString().trim();
+    const searchStrLower = searchStr.toLowerCase();
+    const cat = category ? category.toString().trim().toLowerCase() : '';
 
-    // 3. Database Pipeline & Forecasting suggestions
-    const matchedPipeline = await prisma.pipelineProspector.findMany({
-      where: {
-        OR: [
-          { leadDrug: { contains: searchStr, mode: 'insensitive' } },
-          { primaryIndication: { contains: searchStr, mode: 'insensitive' } }
-        ]
-      },
-      take: 20
-    });
+    let suggestions: Array<{ type: string, text: string }> = [];
 
-    const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-      where: {
-        OR: [
-          { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
-          { brandName: { contains: searchStr, mode: 'insensitive' } },
-          { indicationApproved: { contains: searchStr, mode: 'insensitive' } }
-        ]
-      },
-      take: 20
-    });
-    
-    const drugNames = new Set<string>();
-    const otherDiseases = new Set<string>();
-    
-    matchedPipeline.forEach(m => {
-      if (m.leadDrug && m.leadDrug.toLowerCase().includes(searchStr)) {
-        drugNames.add(m.leadDrug);
-      }
-      if (m.primaryIndication && m.primaryIndication.toLowerCase().includes(searchStr)) {
-        otherDiseases.add(m.primaryIndication);
-      }
-    });
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    matchedForecasting.forEach(m => {
-      const name = m.brandName || m.activeIngredient;
-      if (name && name.toLowerCase().includes(searchStr)) {
-        drugNames.add(name);
+    if (!cat) {
+      // Original default autocomplete behavior
+      // 1. Predefined Country suggestions
+      const ALL_COUNTRIES = ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'];
+      ALL_COUNTRIES.forEach(c => {
+        if (c.toLowerCase().includes(searchStrLower)) {
+          suggestions.push({ type: 'country', text: c });
+        }
+      });
+      
+      // 2. Predefined Disease suggestions
+      const DISEASES = ['Fever', 'Cold/Cough', 'Asthma'];
+      DISEASES.forEach(d => {
+        if (d.toLowerCase().includes(searchStrLower)) {
+          suggestions.push({ type: 'disease', text: d });
+        }
+      });
+
+      // 3. Database Pipeline & Forecasting suggestions
+      const matchedPipeline = await prisma.pipelineProspector.findMany({
+        where: {
+          OR: [
+            { leadDrug: { contains: searchStr, mode: 'insensitive' } },
+            { primaryIndication: { contains: searchStr, mode: 'insensitive' } }
+          ]
+        },
+        take: 20
+      });
+
+      const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+        where: {
+          OR: [
+            { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
+            { brandName: { contains: searchStr, mode: 'insensitive' } },
+            { indicationApproved: { contains: searchStr, mode: 'insensitive' } }
+          ]
+        },
+        take: 20
+      });
+      
+      const drugNames = new Set<string>();
+      const otherDiseases = new Set<string>();
+      
+      matchedPipeline.forEach(m => {
+        if (m.leadDrug && m.leadDrug.toLowerCase().includes(searchStrLower)) {
+          drugNames.add(m.leadDrug);
+        }
+        if (m.primaryIndication && m.primaryIndication.toLowerCase().includes(searchStrLower)) {
+          otherDiseases.add(m.primaryIndication);
+        }
+      });
+
+      matchedForecasting.forEach(m => {
+        const name = m.brandName || m.activeIngredient;
+        if (name && name.toLowerCase().includes(searchStrLower)) {
+          drugNames.add(name);
+        }
+        if (m.indicationApproved && m.indicationApproved.toLowerCase().includes(searchStrLower)) {
+          otherDiseases.add(m.indicationApproved);
+        }
+      });
+      
+      drugNames.forEach(name => {
+        suggestions.push({ type: 'medicine', text: name });
+      });
+      
+      otherDiseases.forEach(ind => {
+        if (!DISEASES.some(d => d.toLowerCase() === ind.toLowerCase())) {
+          suggestions.push({ type: 'disease', text: ind });
+        }
+      });
+    } else {
+      // Category specific autocomplete
+      if (cat === 'disease') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
+          select: { primaryIndication: true },
+          distinct: ['primaryIndication'],
+          take: 15
+        });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
+          select: { indicationApproved: true },
+          distinct: ['indicationApproved'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.primaryIndication && results.add(p.primaryIndication));
+        matchedForecasting.forEach(f => f.indicationApproved && results.add(f.indicationApproved));
+        results.forEach(text => suggestions.push({ type: 'disease', text }));
+      } else if (cat === 'therapy area' || cat === 'therapyarea' || cat === 'therapeuticarea') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          select: { therapeuticArea: true },
+          distinct: ['therapeuticArea'],
+          take: 15
+        });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          select: { therapeuticArea: true },
+          distinct: ['therapeuticArea'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.therapeuticArea && results.add(p.therapeuticArea));
+        matchedForecasting.forEach(f => f.therapeuticArea && results.add(f.therapeuticArea));
+        results.forEach(text => suggestions.push({ type: 'therapyArea', text }));
+      } else if (cat === 'current development phase' || cat === 'developmentphase' || cat === 'phase') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { developmentPhase: { contains: searchStr, mode: 'insensitive' } },
+          select: { developmentPhase: true },
+          distinct: ['developmentPhase'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.developmentPhase && results.add(p.developmentPhase));
+        results.forEach(text => suggestions.push({ type: 'developmentPhase', text }));
+      } else if (cat === 'company/ sponsor' || cat === 'company' || cat === 'sponsor') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: {
+            OR: [
+              { companyName: { contains: searchStr, mode: 'insensitive' } },
+              { sponsor: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          select: { companyName: true, sponsor: true },
+          take: 20
+        });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: { applicant: { contains: searchStr, mode: 'insensitive' } },
+          select: { applicant: true },
+          distinct: ['applicant'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => {
+          if (p.companyName) results.add(p.companyName);
+          if (p.sponsor) results.add(p.sponsor);
+        });
+        matchedForecasting.forEach(f => f.applicant && results.add(f.applicant));
+        results.forEach(text => suggestions.push({ type: 'sponsor', text }));
+      } else if (cat === 'biomarker/ moa' || cat === 'moa' || cat === 'biomarker') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: {
+            OR: [
+              { mechanismOfAction: { contains: searchStr, mode: 'insensitive' } },
+              { targetBiomarker: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          select: { mechanismOfAction: true, targetBiomarker: true },
+          take: 20
+        });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: {
+            OR: [
+              { moa: { contains: searchStr, mode: 'insensitive' } },
+              { biomarker: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          select: { moa: true, biomarker: true },
+          take: 20
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => {
+          if (p.mechanismOfAction) results.add(p.mechanismOfAction);
+          if (p.targetBiomarker) results.add(p.targetBiomarker);
+        });
+        matchedForecasting.forEach(f => {
+          if (f.moa) results.add(f.moa);
+          if (f.biomarker) results.add(f.biomarker);
+        });
+        results.forEach(text => suggestions.push({ type: 'biomarker/moa', text }));
+      } else if (cat === 'product/ candidate' || cat === 'product' || cat === 'candidate') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { leadDrug: { contains: searchStr, mode: 'insensitive' } },
+          select: { leadDrug: true },
+          distinct: ['leadDrug'],
+          take: 15
+        });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: {
+            OR: [
+              { brandName: { contains: searchStr, mode: 'insensitive' } },
+              { activeIngredient: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          select: { brandName: true, activeIngredient: true },
+          take: 20
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.leadDrug && results.add(p.leadDrug));
+        matchedForecasting.forEach(f => {
+          if (f.brandName) results.add(f.brandName);
+          if (f.activeIngredient) results.add(f.activeIngredient);
+        });
+        results.forEach(text => suggestions.push({ type: 'product', text }));
+      } else if (cat === 'type of molecule' || cat === 'moleculetype') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { moleculeType: { contains: searchStr, mode: 'insensitive' } },
+          select: { moleculeType: true },
+          distinct: ['moleculeType'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.moleculeType && results.add(p.moleculeType));
+        results.forEach(text => suggestions.push({ type: 'moleculeType', text }));
+      } else if (cat === 'biological class' || cat === 'moleculeclass') {
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: { moleculeClass: { contains: searchStr, mode: 'insensitive' } },
+          select: { moleculeClass: true },
+          distinct: ['moleculeClass'],
+          take: 15
+        });
+        const results = new Set<string>();
+        matchedPipeline.forEach(p => p.moleculeClass && results.add(p.moleculeClass));
+        results.forEach(text => suggestions.push({ type: 'moleculeClass', text }));
+      } else if (cat === 'marketed drugs' || cat === 'marketed') {
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: {
+            OR: [
+              { brandName: { contains: searchStr, mode: 'insensitive' } },
+              { activeIngredient: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          select: { brandName: true, activeIngredient: true },
+          take: 20
+        });
+        const results = new Set<string>();
+        matchedForecasting.forEach(f => {
+          if (f.brandName) results.add(f.brandName);
+          if (f.activeIngredient) results.add(f.activeIngredient);
+        });
+        results.forEach(text => suggestions.push({ type: 'marketed', text }));
+      } else if (cat === 'off patent drugs' || cat === 'offpatent') {
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: {
+            AND: [
+              {
+                OR: [
+                  { brandName: { contains: searchStr, mode: 'insensitive' } },
+                  { activeIngredient: { contains: searchStr, mode: 'insensitive' } }
+                ]
+              },
+              { patentExpiryDate: { lt: todayStr } }
+            ]
+          },
+          select: { brandName: true, activeIngredient: true },
+          take: 20
+        });
+        const results = new Set<string>();
+        matchedForecasting.forEach(f => {
+          if (f.brandName) results.add(f.brandName);
+          if (f.activeIngredient) results.add(f.activeIngredient);
+        });
+        results.forEach(text => suggestions.push({ type: 'offPatent', text }));
       }
-      if (m.indicationApproved && m.indicationApproved.toLowerCase().includes(searchStr)) {
-        otherDiseases.add(m.indicationApproved);
-      }
-    });
-    
-    drugNames.forEach(name => {
-      suggestions.push({ type: 'medicine', text: name });
-    });
-    
-    otherDiseases.forEach(ind => {
-      if (!DISEASES.some(d => d.toLowerCase() === ind.toLowerCase())) {
-        suggestions.push({ type: 'disease', text: ind });
-      }
-    });
-    
+    }
+
     // Deduplicate suggestions and cap at 10 items
     const seen = new Set();
     const uniqueSuggestions = suggestions.filter(s => {
@@ -747,10 +960,287 @@ export const getSuggestions = async (req: Request, res: Response) => {
       seen.add(key);
       return true;
     }).slice(0, 10);
-    
+
     return res.status(200).json({ suggestions: uniqueSuggestions });
   } catch (error) {
     console.error('Suggestions error:', error);
     return res.status(500).json({ message: 'Error fetching suggestions' });
+  }
+};
+
+export const getMedicineAnalysis = async (req: Request, res: Response) => {
+  try {
+    const { query, field, countries, diseases } = req.query;
+
+    // Parse filters
+    let selectedCountries: string[] = [];
+    let hasCountryFilter = false;
+    if (countries !== undefined) {
+      if (typeof countries === 'string') {
+        selectedCountries = countries.split(',').map(c => c.trim()).filter(Boolean);
+      } else if (Array.isArray(countries)) {
+        selectedCountries = countries.map(c => String(c).trim()).filter(Boolean);
+      }
+      hasCountryFilter = selectedCountries.length > 0;
+    }
+
+    let selectedDiseases: string[] = [];
+    let hasDiseaseFilter = false;
+    if (diseases !== undefined) {
+      if (typeof diseases === 'string') {
+        selectedDiseases = diseases.split(',').map(d => d.trim()).filter(Boolean);
+      } else if (Array.isArray(diseases)) {
+        selectedDiseases = diseases.map(d => String(d).trim()).filter(Boolean);
+      }
+      hasDiseaseFilter = selectedDiseases.length > 0;
+    }
+
+    // Build Pipeline filters
+    const wherePipeline: any = {};
+    if (query && query.toString().trim() !== '') {
+      const searchStr = query.toString().trim();
+      if (field === 'drugName') {
+        wherePipeline.leadDrug = { contains: searchStr, mode: 'insensitive' };
+      } else if (field === 'indication') {
+        wherePipeline.primaryIndication = { contains: searchStr, mode: 'insensitive' };
+      } else if (field === 'moa') {
+        wherePipeline.mechanismOfAction = { contains: searchStr, mode: 'insensitive' };
+      } else {
+        wherePipeline.OR = [
+          { leadDrug: { contains: searchStr, mode: 'insensitive' } },
+          { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
+          { mechanismOfAction: { contains: searchStr, mode: 'insensitive' } },
+          { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          { sponsor: { contains: searchStr, mode: 'insensitive' } },
+        ];
+      }
+    }
+    if (hasCountryFilter) {
+      wherePipeline.country = { in: selectedCountries };
+    }
+    if (hasDiseaseFilter) {
+      wherePipeline.OR = selectedDiseases.map(d => ({
+        primaryIndication: { contains: d, mode: 'insensitive' }
+      }));
+    }
+
+    // Build Forecasting filters
+    const whereForecasting: any = {};
+    if (query && query.toString().trim() !== '') {
+      const searchStr = query.toString().trim();
+      if (field === 'drugName') {
+        whereForecasting.OR = [
+          { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
+          { brandName: { contains: searchStr, mode: 'insensitive' } },
+        ];
+      } else if (field === 'indication') {
+        whereForecasting.OR = [
+          { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
+          { indicationUnderEvaluation: { contains: searchStr, mode: 'insensitive' } },
+        ];
+      } else if (field === 'moa') {
+        whereForecasting.moa = { contains: searchStr, mode: 'insensitive' };
+      } else {
+        whereForecasting.OR = [
+          { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
+          { brandName: { contains: searchStr, mode: 'insensitive' } },
+          { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
+          { moa: { contains: searchStr, mode: 'insensitive' } },
+          { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          { applicant: { contains: searchStr, mode: 'insensitive' } },
+        ];
+      }
+    }
+    if (hasCountryFilter) {
+      whereForecasting.country = { in: selectedCountries };
+    }
+    if (hasDiseaseFilter) {
+      whereForecasting.OR = selectedDiseases.map(d => ({
+        indicationApproved: { contains: d, mode: 'insensitive' }
+      }));
+    }
+
+    const pipelines = await prisma.pipelineProspector.findMany({ where: wherePipeline });
+    const forecastings = await prisma.patentSalesForecasting.findMany({ where: whereForecasting });
+
+    // 12 Stats counters
+    const productTrial = pipelines.length;
+    
+    const productTypeSet = new Set(pipelines.map(p => p.moleculeType).filter(Boolean));
+    const productType = productTypeSet.size;
+
+    const biomarkerMoaSet = new Set([
+      ...pipelines.map(p => p.mechanismOfAction).filter(Boolean),
+      ...pipelines.map(p => p.targetBiomarker).filter(Boolean),
+      ...forecastings.map(f => f.moa).filter(Boolean),
+      ...forecastings.map(f => f.biomarker).filter(Boolean)
+    ]);
+    const biomarkerMoa = biomarkerMoaSet.size;
+
+    const therapeuticAreaSet = new Set([
+      ...pipelines.map(p => p.therapeuticArea).filter(Boolean),
+      ...forecastings.map(f => f.therapeuticArea).filter(Boolean)
+    ]);
+    const therapeuticArea = therapeuticAreaSet.size;
+
+    const sponsorSet = new Set([
+      ...pipelines.map(p => p.sponsor || p.companyName).filter(Boolean),
+      ...forecastings.map(f => f.applicant).filter(Boolean)
+    ]);
+    const sponsor = sponsorSet.size;
+
+    const pipelineCandidatesSet = new Set(pipelines.map(p => p.leadDrug).filter(Boolean));
+    const pipelineCandidates = pipelineCandidatesSet.size;
+
+    const marketedDrug = forecastings.length;
+
+    const licensingCount = pipelines.filter(p => p.licensingAvailability && p.licensingAvailability.toLowerCase().includes('yes')).length;
+    const availableForLicensing = licensingCount;
+
+    const biologicalClassSet = new Set(pipelines.map(p => p.moleculeClass).filter(Boolean));
+    const biologicalClass = biologicalClassSet.size;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const patentExpiry = forecastings.filter(f => f.patentExpiryDate && f.patentExpiryDate < todayStr).length;
+
+    // Sales Data Total Sum
+    let totalSalesMillions = 0;
+    forecastings.forEach(f => {
+      const val18 = parseFloat(f.sales2018 || '0') || 0;
+      const val19 = parseFloat(f.sales2019 || '0') || 0;
+      const val20 = parseFloat(f.sales2020 || '0') || 0;
+      const val21 = parseFloat(f.sales2021 || '0') || 0;
+      const val22 = parseFloat(f.sales2022 || '0') || 0;
+      totalSalesMillions += (val18 + val19 + val20 + val21 + val22);
+    });
+
+    // Clinical Trial Result statuses
+    const trialStatusMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const status = p.trialStatus || 'Active';
+      trialStatusMap[status] = (trialStatusMap[status] || 0) + 1;
+    });
+
+    // Pipeline Candidates (by phase count)
+    const phaseMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const ph = p.developmentPhase || p.phases || 'N/A';
+      phaseMap[ph] = (phaseMap[ph] || 0) + 1;
+    });
+    const pipelineByPhase = Object.entries(phaseMap).map(([phase, count]) => ({ phase, count }));
+
+    // Sponsor Analysis (Top 8 Sponsors)
+    const sponsorCountMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const sp = p.sponsor || p.companyName || 'N/A';
+      sponsorCountMap[sp] = (sponsorCountMap[sp] || 0) + 1;
+    });
+    forecastings.forEach(f => {
+      const sp = f.applicant || 'N/A';
+      sponsorCountMap[sp] = (sponsorCountMap[sp] || 0) + 1;
+    });
+    const topSponsors = Object.entries(sponsorCountMap)
+      .map(([sponsor, count]) => ({ sponsor, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    // Prediction of Launch (line chart over years)
+    const predictionMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const yr = p.predictionOfLaunching || p.year;
+      if (yr && /^\d{4}$/.test(yr)) {
+        predictionMap[yr] = (predictionMap[yr] || 0) + 1;
+      }
+    });
+    const predictionOfLaunch = Object.entries(predictionMap)
+      .map(([year, count]) => ({ year, count }))
+      .sort((a, b) => a.year.localeCompare(b.year));
+
+    // Product Level Competition (unique count of products by phase)
+    const productPhaseMap: Record<string, Set<string>> = {};
+    pipelines.forEach(p => {
+      const ph = p.developmentPhase || p.phases || 'N/A';
+      const drug = p.leadDrug;
+      if (drug) {
+        if (!productPhaseMap[ph]) productPhaseMap[ph] = new Set();
+        productPhaseMap[ph].add(drug);
+      }
+    });
+    const productLevelCompetition = Object.entries(productPhaseMap).map(([phase, set]) => ({
+      phase,
+      count: set.size
+    }));
+
+    // Country Wise Analysis
+    const countryMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const c = p.country || 'US';
+      countryMap[c] = (countryMap[c] || 0) + 1;
+    });
+    forecastings.forEach(f => {
+      const c = f.country || 'US';
+      countryMap[c] = (countryMap[c] || 0) + 1;
+    });
+    const countryWiseAnalysis = Object.entries(countryMap).map(([country, count]) => ({ country, count }));
+
+    // Therapeutic Area Breakdown
+    const taMap: Record<string, number> = {};
+    pipelines.forEach(p => {
+      const ta = p.therapeuticArea || 'N/A';
+      taMap[ta] = (taMap[ta] || 0) + 1;
+    });
+    forecastings.forEach(f => {
+      const ta = f.therapeuticArea || 'N/A';
+      taMap[ta] = (taMap[ta] || 0) + 1;
+    });
+    const therapeuticAreaBreakdown = Object.entries(taMap)
+      .map(([therapeuticArea, count]) => ({ therapeuticArea, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Extract contacts list from clinical pipeline records
+    const contactsList: Array<{ name: string; email: string; phone: string; role: string; trial: string }> = [];
+    pipelines.forEach(p => {
+      const name = p.contactPersonName || p.clinicalInvestigatorName;
+      const email = p.contactEmail || p.emailIdLink;
+      const phone = p.contactTel || p.contactNo;
+      if (name || email || phone) {
+        contactsList.push({
+          name: name || 'N/A',
+          email: email || 'N/A',
+          phone: phone || 'N/A',
+          role: p.designation || (p.clinicalInvestigatorName ? 'Investigator' : 'Contact Person'),
+          trial: p.leadDrug ? `${p.leadDrug} (${p.nctNumber || 'N/A'})` : (p.nctNumber || 'N/A')
+        });
+      }
+    });
+
+    return res.status(200).json({
+      metrics: {
+        productTrial,
+        productType,
+        biomarkerMoa,
+        therapeuticArea,
+        sponsor,
+        pipelineCandidates,
+        marketedDrug,
+        availableForLicensing,
+        biologicalClass,
+        patentExpiry,
+        totalSalesMillions,
+        trialStatusMap,
+        contacts: contactsList.slice(0, 30)
+      },
+      charts: {
+        pipelineByPhase,
+        topSponsors,
+        predictionOfLaunch,
+        productLevelCompetition,
+        countryWiseAnalysis,
+        therapeuticAreaBreakdown
+      }
+    });
+  } catch (error) {
+    console.error('Analysis error:', error);
+    return res.status(500).json({ message: 'Error retrieving analysis statistics' });
   }
 };

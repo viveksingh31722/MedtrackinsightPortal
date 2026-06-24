@@ -19,7 +19,7 @@ export default function AboutPage() {
       </div>
 
       {/* Corporate Capabilities Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', marginBottom: '60px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '32px', marginBottom: '60px' }}>
         
         <div className="card">
           <div style={{ fontSize: '36px', marginBottom: '16px' }}>🔬</div>
@@ -61,7 +61,7 @@ export default function AboutPage() {
       </div>
 
       {/* Section team summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center' }}>
+      <div className="split-layout" style={{ alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '28px', marginBottom: '16px' }}>Accurate Clinical Benchmarks</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '14px' }}>

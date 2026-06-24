@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import xlsx from 'xlsx';
 import { prisma } from '../config/prisma';
 import { esClient } from '../config/elasticsearch';
+import { sendContactEmail, sendDemoEmail, sendContactThankYouEmail, sendDemoThankYouEmail } from '../utils/mailer';
 
 // Case-insensitive key retriever for robust spreadsheet parsing
 function getValue(row: any, normalizedKey: string): string | null {
@@ -374,6 +375,16 @@ export const postDemoRequest = async (req: Request, res: Response) => {
       },
     });
 
+    // Send demo request notification email in the background
+    sendDemoEmail(name, company, email, jobTitle, requirements || '').catch(err => {
+      console.error('Background sendDemoEmail failed:', err);
+    });
+
+    // Send thank you confirmation email to the user in the background
+    sendDemoThankYouEmail(name, company, email, jobTitle, requirements || '').catch(err => {
+      console.error('Background sendDemoThankYouEmail failed:', err);
+    });
+
     return res.status(201).json({ message: 'Your demo request has been successfully registered.' });
   } catch (error) {
     console.error('Demo request submission error:', error);
@@ -390,6 +401,16 @@ export const postContactMessage = async (req: Request, res: Response) => {
 
     await prisma.contactMessage.create({
       data: { name, email, message },
+    });
+
+    // Send contact notification email in the background
+    sendContactEmail(name, email, message).catch(err => {
+      console.error('Background sendContactEmail failed:', err);
+    });
+
+    // Send thank you confirmation email to the user in the background
+    sendContactThankYouEmail(name, email, message).catch(err => {
+      console.error('Background sendContactThankYouEmail failed:', err);
     });
 
     return res.status(201).json({ message: 'Message recorded successfully.' });

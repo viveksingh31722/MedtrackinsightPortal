@@ -150,6 +150,7 @@ async function main() {
       email: 'user@medtrack.com',
       password: hashedUserPassword,
       isSubscribed: false,
+      emailVerified: true,
     },
   });
 
@@ -160,6 +161,7 @@ async function main() {
       password: hashedUserPassword,
       isSubscribed: true,
       subscriptionEnd: subEnd,
+      emailVerified: true,
     },
   });
 
@@ -170,6 +172,7 @@ async function main() {
       password: hashedAdminPassword,
       isSubscribed: true,
       subscriptionEnd: subEnd,
+      emailVerified: true,
     },
   });
 

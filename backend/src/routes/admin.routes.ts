@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { uploadMedicineSheet, postDemoRequest, postContactMessage, getStats, deleteMedicine, clearAllMedicines } from '../controllers/admin.controller';
+import { authenticateJWT } from '../middleware/auth.middleware';
+import { requireAdmin } from '../middleware/admin.middleware';
 
 const router = Router();
 
@@ -13,21 +15,21 @@ const upload = multer({
   },
 });
 
-// Admin upload spreadsheet endpoint
-router.post('/upload', upload.single('file'), uploadMedicineSheet);
+// Admin upload spreadsheet endpoint - PROTECTED
+router.post('/upload', authenticateJWT, requireAdmin, upload.single('file'), uploadMedicineSheet);
 
-// Clear whole catalog database tables
-router.post('/clear', clearAllMedicines);
+// Clear whole catalog database tables - PROTECTED
+router.post('/clear', authenticateJWT, requireAdmin, clearAllMedicines);
 
-// Selective deletion endpoint
-router.delete('/medicine/:id', deleteMedicine);
+// Selective deletion endpoint - PROTECTED
+router.delete('/medicine/:id', authenticateJWT, requireAdmin, deleteMedicine);
 
-// Forms submission pipelines
+// Forms submission pipelines (PUBLIC)
 router.post('/demo', postDemoRequest);
 router.post('/contact', postContactMessage);
 
-// Stats retrieval dashboard metrics API
-router.get('/stats', getStats);
+// Stats retrieval dashboard metrics API - PROTECTED
+router.get('/stats', authenticateJWT, requireAdmin, getStats);
 
 export default router;
 export { router as adminRoutes };

@@ -19,6 +19,7 @@ model User {
   subscriptionEnd DateTime?
   downloadCount   Int       @default(0)
   refreshToken    String?
+  emailVerified   Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
@@ -154,4 +155,15 @@ model ContactMessage {
   email     String
   message   String
   createdAt DateTime @default(now())
+}
+
+model OtpVerification {
+  id           String   @id @default(uuid())
+  email        String
+  otp          String
+  passwordHash String?  // Optional, holds the temp registration password hash
+  attempts     Int      @default(0) // Tracks failed verification attempts for brute force protection
+  type         String   // 'SIGNUP' or 'PASSWORD_RESET'
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
 }

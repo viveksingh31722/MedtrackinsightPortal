@@ -19,6 +19,7 @@ export default function ContactPage() {
 
     try {
       setLoading(true);
+      const startTime = Date.now();
       const res = await fetch(`${apiBaseUrl}/admin/contact`, {
         method: 'POST',
         headers: {
@@ -26,6 +27,12 @@ export default function ContactPage() {
         },
         body: JSON.stringify({ name, email, message }),
       });
+
+      const elapsed = Date.now() - startTime;
+      const minDelay = 1500;
+      if (elapsed < minDelay) {
+        await new Promise(resolve => setTimeout(resolve, minDelay - elapsed));
+      }
 
       if (res.ok) {
         showToast('Your message has been recorded. Our team will respond shortly.', 'success');
@@ -43,7 +50,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="container" style={{ padding: '60px 24px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '64px' }}>
+    <div className="container split-layout" style={{ padding: '60px 24px' }}>
       
       {/* Informational left section */}
       <div>
@@ -56,15 +63,15 @@ export default function ContactPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div className="card" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <div style={{ fontSize: '24px' }}>📧</div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h4 style={{ fontSize: '15px' }}>Email Inquiries</h4>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>support@medtrackinsight.com</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', wordBreak: 'break-all' }}>support@medtrackinsight.com</p>
             </div>
           </div>
 
           <div className="card" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <div style={{ fontSize: '24px' }}>🏢</div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h4 style={{ fontSize: '15px' }}>HQ Operations</h4>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Biopark Science Complex, Building 4, Boston, MA</p>
             </div>
@@ -75,7 +82,7 @@ export default function ContactPage() {
       {/* Form right section */}
       <div className="card">
         <h3 style={{ fontSize: '20px', marginBottom: '20px' }}>Submit a Message</h3>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', cursor: loading ? 'wait' : 'default' }}>
           
           <div className="form-group">
             <label htmlFor="contact-name" className="form-label">Full Name</label>
@@ -117,7 +124,7 @@ export default function ContactPage() {
             />
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%' }}>
+          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Recording...' : 'Send Message'}
           </button>
         </form>

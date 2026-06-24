@@ -177,7 +177,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '16px' }}>
         <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
           <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{stats.totalPipeline || 0}</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Pipeline Records</div>
@@ -197,7 +197,7 @@ export default function AdminPage() {
       </div>
 
       {/* Layout grid splits: Left (Upload form), Right (Delete controls & Stats) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '32px' }}>
+      <div className="split-layout">
         
         {/* Left Side: Upload console */}
         <div className="card" style={{ height: 'fit-content' }}>

@@ -22,6 +22,7 @@ export default function DemoPage() {
 
     try {
       setLoading(true);
+      const startTime = Date.now();
       const res = await fetch(`${apiBaseUrl}/admin/demo`, {
         method: 'POST',
         headers: {
@@ -29,6 +30,12 @@ export default function DemoPage() {
         },
         body: JSON.stringify({ name, email, company, jobTitle, requirements }),
       });
+
+      const elapsed = Date.now() - startTime;
+      const minDelay = 1500;
+      if (elapsed < minDelay) {
+        await new Promise(resolve => setTimeout(resolve, minDelay - elapsed));
+      }
 
       if (res.ok) {
         showToast('Demo request registered! Our sales desk will call you.', 'success');
@@ -59,7 +66,7 @@ export default function DemoPage() {
       </div>
 
       <div className="card">
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', cursor: loading ? 'wait' : 'default' }}>
           
           <div className="form-split-row">
             <div className="form-group">
@@ -128,7 +135,7 @@ export default function DemoPage() {
             />
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', height: '46px' }}>
+          <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', height: '46px', cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? 'Submitting request...' : 'Book Walkthrough Demo'}
           </button>
 

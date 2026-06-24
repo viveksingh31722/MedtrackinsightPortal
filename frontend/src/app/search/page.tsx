@@ -5,6 +5,45 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
+function AnimatedCounter({ value }: { value: number }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const duration = 1000; // Count up dynamically in exactly 1 second
+    const startValue = 0;
+    const endValue = value;
+
+    if (endValue === 0) {
+      setCount(0);
+      return;
+    }
+
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      setCount(Math.floor(progress * (endValue - startValue) + startValue));
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      } else {
+        setCount(endValue);
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [value]);
+
+  return <>{count.toLocaleString()}</>;
+}
+
 function SearchResultsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -54,6 +93,28 @@ function SearchResultsContent() {
   const [selectedCountries, setSelectedCountries] = useState<string[]>(countriesParam);
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>(diseasesParam);
 
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+
+  // Modals for sales and clinical trial result cards
+  const [showSalesModal, setShowSalesModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+
+  const CATEGORIES = [
+    'Therapy Area',
+    'Disease',
+    'Current Development Phase',
+    'Company/ Sponsor',
+    'Biomarker/ MOA',
+    'Product/ Candidate',
+    'Type Of Molecule',
+    'Biological Class',
+    'Marketed Drugs',
+    'Off Patent Drugs'
+  ];
+
   // Suggestions UI states
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -89,17 +150,93 @@ function SearchResultsContent() {
   // Prevent background scrolling and hide main page scrollbar when details drawer is open
   useEffect(() => {
     if (drawerOpen) {
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('drawer-open');
+      document.body.classList.add('drawer-open');
     } else {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('drawer-open');
+      document.body.classList.remove('drawer-open');
     }
     return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('drawer-open');
+      document.body.classList.remove('drawer-open');
     };
   }, [drawerOpen]);
+
+  const isSuggestionChecked = (suggestion: any) => {
+    const text = suggestion.text;
+    const type = suggestion.type;
+    if (type === 'country') {
+      return selectedCountries.includes(text);
+    }
+    if (type === 'disease') {
+      return selectedDiseases.includes(text);
+    }
+    if (type === 'sponsor') {
+      return selectedSponsors.includes(text);
+    }
+    if (type === 'developmentPhase' || type === 'therapyArea') {
+      return selectedPhases.includes(text);
+    }
+    // Check if keyword is part of comma-separated string
+    const keywords = query.split(',').map((s: string) => s.trim()).filter(Boolean);
+    return keywords.includes(text);
+  };
+
+  const handleToggleSuggestion = (suggestion: any) => {
+    const text = suggestion.text;
+    const type = suggestion.type;
+    if (type === 'country') {
+      const next = selectedCountries.includes(text)
+        ? selectedCountries.filter(c => c !== text)
+        : [...selectedCountries, text];
+      setSelectedCountries(next);
+    } else if (type === 'disease') {
+      const next = selectedDiseases.includes(text)
+        ? selectedDiseases.filter(d => d !== text)
+        : [...selectedDiseases, text];
+      setSelectedDiseases(next);
+    } else if (type === 'sponsor') {
+      const next = selectedSponsors.includes(text)
+        ? selectedSponsors.filter(s => s !== text)
+        : [...selectedSponsors, text];
+      setSelectedSponsors(next);
+    } else if (type === 'developmentPhase' || type === 'therapyArea') {
+      const next = selectedPhases.includes(text)
+        ? selectedPhases.filter(p => p !== text)
+        : [...selectedPhases, text];
+      setSelectedPhases(next);
+    } else {
+      const keywords = query.split(',').map((s: string) => s.trim()).filter(Boolean);
+      const nextKeywords = keywords.includes(text)
+        ? keywords.filter((k: string) => k !== text)
+        : [...keywords, text];
+      setQuery(nextKeywords.join(', '));
+    }
+  };
+
+  const fetchAnalysisData = async () => {
+    try {
+      setAnalysisLoading(true);
+      const currentCountries = getCountriesFromParams();
+      const currentDiseases = getDiseasesFromParams();
+      const params = new URLSearchParams({
+        query: queryParam,
+        field: fieldParam,
+        countries: currentCountries.join(','),
+        diseases: currentDiseases.join(','),
+      });
+
+      const res = await fetch(`${apiBaseUrl}/medicine/analysis?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalysisData(data);
+      }
+    } catch (err) {
+      console.error('Error fetching analysis data:', err);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   // Autocomplete fetcher
   useEffect(() => {
@@ -110,7 +247,7 @@ function SearchResultsContent() {
     
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}`);
+        const res = await fetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}&category=${encodeURIComponent(selectedCategory)}`);
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data.suggestions);
@@ -121,18 +258,20 @@ function SearchResultsContent() {
     }, 200); // 200ms debounce
     
     return () => clearTimeout(delayDebounceFn);
-  }, [query, apiBaseUrl]);
+  }, [query, selectedCategory, apiBaseUrl]);
 
   // Track page parameters when URL changes
   useEffect(() => {
     setQuery(queryParam);
     setField(fieldParam);
     setDataset(datasetParam);
+    setSelectedCategory(searchParams.get('category') || '');
     const parsedCountries = getCountriesFromParams();
     setSelectedCountries(parsedCountries);
     const parsedDiseases = getDiseasesFromParams();
     setSelectedDiseases(parsedDiseases);
     fetchSearchResults(1);
+    fetchAnalysisData();
   }, [queryParam, fieldParam, datasetParam, searchParams]);
 
   // Fetch search results from backend
@@ -185,6 +324,7 @@ function SearchResultsContent() {
     if (query.trim() !== '') params.append('query', query.trim());
     if (field !== 'all') params.append('field', field);
     if (dataset !== '') params.append('dataset', dataset);
+    if (selectedCategory !== '') params.append('category', selectedCategory);
     params.append('countries', selectedCountries.join(','));
     params.append('diseases', selectedDiseases.join(','));
     router.push(`/search?${params.toString()}`);
@@ -419,43 +559,37 @@ function SearchResultsContent() {
               />
               
               {showSuggestions && suggestions.length > 0 && (
-                <div className="autocomplete-dropdown">
+                <div className="autocomplete-dropdown" onMouseDown={(e) => e.preventDefault()}>
                   {suggestions.map((suggestion, idx) => {
                     let icon = '💊';
                     if (suggestion.type === 'disease') icon = '🦠';
-                    if (suggestion.type === 'country') icon = '🌎';
+                    else if (suggestion.type === 'country') icon = '🌎';
+                    else if (suggestion.type === 'therapyArea') icon = '🩺';
+                    else if (suggestion.type === 'developmentPhase') icon = '📊';
+                    else if (suggestion.type === 'sponsor') icon = '🏢';
+                    else if (suggestion.type === 'biomarker/moa') icon = '🧬';
+                    else if (suggestion.type === 'product') icon = '🧪';
+                    else if (suggestion.type === 'moleculeType') icon = '🔬';
+                    else if (suggestion.type === 'moleculeClass') icon = '🧬';
+                    else if (suggestion.type === 'marketed') icon = '🛍️';
+                    else if (suggestion.type === 'offPatent') icon = '📅';
+                    
+                    const isChecked = isSuggestionChecked(suggestion);
                     
                     return (
                       <div
                         key={idx}
                         className="autocomplete-item"
-                        onClick={() => {
-                          if (suggestion.type === 'medicine') {
-                            setQuery(suggestion.text);
-                            setField('drugName');
-                            const params = new URLSearchParams(window.location.search);
-                            params.set('query', suggestion.text);
-                            params.set('field', 'drugName');
-                            router.push(`/search?${params.toString()}`);
-                          } else if (suggestion.type === 'disease') {
-                            setQuery(suggestion.text);
-                            setField('indication');
-                            const params = new URLSearchParams(window.location.search);
-                            params.set('query', suggestion.text);
-                            params.set('field', 'indication');
-                            router.push(`/search?${params.toString()}`);
-                          } else if (suggestion.type === 'country') {
-                            setQuery('');
-                            setSelectedCountries([suggestion.text]);
-                            const params = new URLSearchParams(window.location.search);
-                            params.set('query', '');
-                            params.set('countries', suggestion.text);
-                            router.push(`/search?${params.toString()}`);
-                          }
-                          setShowSuggestions(false);
-                        }}
+                        onClick={() => handleToggleSuggestion(suggestion)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer' }}
                       >
-                        <span style={{ marginRight: '8px' }}>{icon}</span>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // toggling handled by parent item click handler
+                          style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ff7a00' }}
+                        />
+                        <span style={{ marginRight: '4px' }}>{icon}</span>
                         <span style={{ fontWeight: 600 }}>{suggestion.text}</span>
                         <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {suggestion.type}
@@ -466,6 +600,9 @@ function SearchResultsContent() {
                 </div>
               )}
             </div>
+
+            {/* Category Pills Row */}
+            <div style={{ display: 'none' }}></div> {/* dummy spacer */}
             <div className="form-group" style={{ width: '180px' }}>
               <label className="form-label">Search Criteria</label>
               <select
@@ -497,175 +634,43 @@ function SearchResultsContent() {
             </button>
           </div>
           
-          {/* Countries Checkbox Panel */}
-          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-light, #64748b)' }}>
-                Target Markets / Jurisdictions
-              </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={handleSelectAllCountries}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--primary, #3b82f6)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    transition: 'background 0.2s',
-                  }}
-                  className="hover-bg-light"
-                >
-                  Select All
-                </button>
-                <span style={{ color: '#cbd5e1', fontSize: '12px' }}>|</span>
-                <button
-                  type="button"
-                  onClick={handleClearAllCountries}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted, #64748b)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    transition: 'background 0.2s',
-                  }}
-                  className="hover-bg-light"
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {ALL_COUNTRIES.map((country) => {
-                const isChecked = selectedCountries.includes(country);
+          {/* Category Pills Row */}
+          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '16px', paddingBottom: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-light, #64748b)', display: 'block', marginBottom: '8px' }}>
+              Filter suggestions by category:
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {CATEGORIES.map((cat) => {
+                const isActive = selectedCategory === cat;
                 return (
-                  <label
-                    key={country}
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(isActive ? '' : cat);
+                      const params = new URLSearchParams(window.location.search);
+                      if (isActive) {
+                        params.delete('category');
+                      } else {
+                        params.set('category', cat);
+                      }
+                      router.push(`/search?${params.toString()}`);
+                    }}
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
+                      padding: '6px 14px',
                       borderRadius: '9999px',
-                      border: `1.5px solid ${isChecked ? 'var(--primary, #3b82f6)' : 'var(--border-color, #cbd5e1)'}`,
-                      backgroundColor: isChecked ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                      color: isChecked ? 'var(--primary, #3b82f6)' : 'var(--text-main, #334155)',
-                      fontSize: '13px',
-                      fontWeight: 600,
+                      border: `1.5px solid ${isActive ? '#ff7a00' : 'var(--border)'}`,
+                      backgroundColor: isActive ? '#ff7a00' : '#111111',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: 700,
                       cursor: 'pointer',
-                      userSelect: 'none',
                       transition: 'all 0.2s ease-in-out',
                     }}
-                    className="country-pill-label"
+                    className={`category-pill ${isActive ? 'active' : ''}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleCountryToggle(country)}
-                      style={{
-                        margin: 0,
-                        cursor: 'pointer',
-                        accentColor: 'var(--primary, #3b82f6)',
-                      }}
-                    />
-                    <span>{country}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Indications/Diseases Checkbox Panel */}
-          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-light, #64748b)' }}>
-                Target Indications / Diseases
-              </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={handleSelectAllDiseases}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--primary, #3b82f6)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    transition: 'background 0.2s',
-                  }}
-                  className="hover-bg-light"
-                >
-                  Select All
-                </button>
-                <span style={{ color: '#cbd5e1', fontSize: '12px' }}>|</span>
-                <button
-                  type="button"
-                  onClick={handleClearAllDiseases}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted, #64748b)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    transition: 'background 0.2s',
-                  }}
-                  className="hover-bg-light"
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {ALL_DISEASES.map((disease) => {
-                const isChecked = selectedDiseases.includes(disease);
-                return (
-                  <label
-                    key={disease}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      borderRadius: '9999px',
-                      border: `1.5px solid ${isChecked ? 'var(--primary, #3b82f6)' : 'var(--border-color, #cbd5e1)'}`,
-                      backgroundColor: isChecked ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                      color: isChecked ? 'var(--primary, #3b82f6)' : 'var(--text-main, #334155)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      transition: 'all 0.2s ease-in-out',
-                    }}
-                    className="country-pill-label"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleDiseaseToggle(disease)}
-                      style={{
-                        margin: 0,
-                        cursor: 'pointer',
-                        accentColor: 'var(--primary, #3b82f6)',
-                      }}
-                    />
-                    <span>{disease}</span>
-                  </label>
+                    {cat}
+                  </button>
                 );
               })}
             </div>
@@ -763,6 +768,883 @@ function SearchResultsContent() {
 
         {/* Main Grid View */}
         <section className="grid-container">
+          
+          {/* Analysis Dashboard Section */}
+          <div className="analysis-section">
+            <h3 className="analysis-title">
+              📊 Basic Summary - {queryParam || 'All Records'}
+            </h3>
+
+            {/* Unified Metrics Card - Always displayed, showing loaders when data is loading */}
+            <div className="unified-metrics-card">
+              {/* Card 1: Product Trial */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)' }}>
+                  🔬
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.productTrial ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Product Trial</span>
+                </div>
+              </div>
+
+              {/* Card 2: Product Type */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)' }}>
+                  📦
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.productType ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Product Type</span>
+                </div>
+              </div>
+
+              {/* Card 3: Biomarker/MOA */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'var(--warning-light)', color: 'var(--warning)' }}>
+                  ⏳
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.biomarkerMoa ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Biomarker/MOA</span>
+                </div>
+              </div>
+
+              {/* Card 4: Therapeutic Area */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', color: 'rgb(236, 72, 153)' }}>
+                  ❤️
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.therapeuticArea ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Therapeutic Area</span>
+                </div>
+              </div>
+
+              {/* Card 5: Sponsor */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'rgb(59, 130, 246)' }}>
+                  🏢
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.sponsor ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Sponsor</span>
+                </div>
+              </div>
+
+              {/* Card 6: Pipeline Candidates */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: 'rgb(139, 92, 246)' }}>
+                  📈
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.pipelineCandidates ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Pipeline Candidates</span>
+                </div>
+              </div>
+
+              {/* Card 7: Marketed Drug */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)', color: 'rgb(6, 182, 212)' }}>
+                  🛍️
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.marketedDrug ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Marketed Drug</span>
+                </div>
+              </div>
+
+              {/* Card 8: Available For Licensing */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', color: 'rgb(168, 85, 247)' }}>
+                  📄
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.availableForLicensing ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Available For Licensing</span>
+                </div>
+              </div>
+
+              {/* Card 9: Biological Class */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'rgb(16, 185, 129)' }}>
+                  🧬
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.biologicalClass ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Biological Class</span>
+                </div>
+              </div>
+
+              {/* Card 10: Patent Expiry */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'rgb(239, 68, 68)' }}>
+                  📅
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value">
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      <AnimatedCounter value={analysisData?.metrics?.patentExpiry ?? 0} />
+                    )}
+                  </span>
+                  <span className="metric-label">Patent Expiry</span>
+                </div>
+              </div>
+
+              {/* Card 11: Sales Data */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'rgb(245, 158, 11)' }}>
+                  💰
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value" style={{ fontSize: '15px' }}>
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      "Sales Data"
+                    )}
+                  </span>
+                  {!analysisLoading && (
+                    <span className="metric-action" onClick={() => setShowSalesModal(true)}>Click to view</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card 12: Contact */}
+              <div className="metric-slot">
+                <div className="metric-icon-box" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', color: 'rgb(236, 72, 153)' }}>
+                  📖
+                </div>
+                <div className="metric-content">
+                  <span className="metric-value" style={{ fontSize: '15px' }}>
+                    {analysisLoading ? (
+                      <span className="skeleton-pulse"></span>
+                    ) : (
+                      "Contact"
+                    )}
+                  </span>
+                  {!analysisLoading && (
+                    <span className="metric-action" onClick={() => setShowContactModal(true)}>Click to view</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {analysisLoading ? (
+              <div className="card" style={{ padding: '60px', textAlign: 'center', marginBottom: '32px' }}>
+                <div style={{ fontSize: '15px', color: 'var(--text-light)' }}>Loading visual analysis charts...</div>
+              </div>
+            ) : analysisData ? (
+              <>
+                <div className="charts-grid">
+                  {/* Chart 1: Pipeline Candidates */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Pipeline Candidates</h4>
+                    {analysisData.charts.pipelineByPhase.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Phase Data</div>
+                    ) : (
+                      <svg viewBox="0 0 400 250" width="100%" height="220">
+                        {(() => {
+                          const data = analysisData.charts.pipelineByPhase;
+                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                          return data.map((d: any, idx: number) => {
+                            const barWidth = (d.count / maxVal) * 220;
+                            const y = idx * 24 + 20;
+                            return (
+                              <g key={idx}>
+                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
+                                </text>
+                                <motion.rect
+                                  x="110"
+                                  y={y}
+                                  height="14"
+                                  rx="4"
+                                  fill="#3c7cb5"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: barWidth }}
+                                  transition={{ duration: 1, ease: 'easeOut' }}
+                                />
+                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.count}
+                                </text>
+                              </g>
+                            );
+                          });
+                        })()}
+                      </svg>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                      * Includes only unique trials. Highest Phase based on Product+Indication.
+                    </span>
+                  </div>
+
+                  {/* Chart 2: Sponsor Analysis */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Sponsor Analysis</h4>
+                    {analysisData.charts.topSponsors.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Sponsor Data</div>
+                    ) : (
+                      <svg viewBox="0 0 400 250" width="100%" height="220">
+                        {(() => {
+                          const data = analysisData.charts.topSponsors;
+                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                          return data.map((d: any, idx: number) => {
+                            const barWidth = (d.count / maxVal) * 200;
+                            const y = idx * 24 + 20;
+                            return (
+                              <g key={idx}>
+                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.sponsor.length > 18 ? d.sponsor.substring(0, 15) + '...' : d.sponsor}
+                                </text>
+                                <motion.rect
+                                  x="130"
+                                  y={y}
+                                  height="14"
+                                  rx="4"
+                                  fill="#3c7cb5"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: barWidth }}
+                                  transition={{ duration: 1, ease: 'easeOut' }}
+                                />
+                                <text x={135 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.count}
+                                </text>
+                              </g>
+                            );
+                          });
+                        })()}
+                      </svg>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                      * Top 8 Sponsor Analysis based on Indication.
+                    </span>
+                  </div>
+
+                  {/* Chart 3: Prediction Of Launch */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Prediction Of Launch</h4>
+                    {analysisData.charts.predictionOfLaunch.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Launch Projection Data</div>
+                    ) : (
+                      <svg viewBox="0 0 400 220" width="100%" height="200">
+                        {(() => {
+                          const data = analysisData.charts.predictionOfLaunch;
+                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                          const width = 340;
+                          const height = 140;
+                          const points = data.map((d: any, idx: number) => {
+                            const x = (idx / Math.max(data.length - 1, 1)) * width + 40;
+                            const y = height - (d.count / maxVal) * (height - 30) + 20;
+                            return { x, y, year: d.year, count: d.count };
+                          });
+
+                          const pathD = points.map((p: any, idx: number) => 
+                            `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+                          ).join(' ');
+
+                          const areaD = points.length > 0 
+                            ? `${pathD} L ${points[points.length - 1].x} ${height + 20} L ${points[0].x} ${height + 20} Z`
+                            : '';
+
+                          return (
+                            <g>
+                              {/* Grid lines */}
+                              <line x1="40" y1={height + 20} x2={width + 40} y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
+                              <line x1="40" y1="20" x2="40" y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
+                              
+                              <defs>
+                                <clipPath id="prediction-clip">
+                                  <motion.rect
+                                    x="0"
+                                    y="0"
+                                    height="220"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: 400 }}
+                                    transition={{ duration: 1.2, ease: 'easeOut' }}
+                                  />
+                                </clipPath>
+                              </defs>
+                              <g clipPath="url(#prediction-clip)">
+                                {/* Filled Area */}
+                                {areaD && <path d={areaD} fill="rgba(243, 112, 33, 0.12)" />}
+
+                                {/* Trend line */}
+                                {pathD && <path d={pathD} fill="none" stroke="#ff7a00" strokeWidth="2.5" />}
+
+                                {/* Points & Labels */}
+                                {points.map((p: any, idx: number) => (
+                                  <g key={idx}>
+                                    <circle cx={p.x} cy={p.y} r="3.5" fill="var(--bg-surface)" stroke="#ff7a00" strokeWidth="2" />
+                                    <text x={p.x} y={height + 34} fill="var(--text-light)" fontSize="8" fontWeight="700" textAnchor="middle">
+                                      {p.year}
+                                    </text>
+                                    <text x={p.x} y={p.y - 6} fill="var(--text-main)" fontSize="8" fontWeight="800" textAnchor="middle">
+                                      {p.count}
+                                    </text>
+                                  </g>
+                                ))}
+                              </g>
+                            </g>
+                          );
+                        })()}
+                      </svg>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                      * Products Over Years based on Product, Indication.
+                    </span>
+                  </div>
+
+                  {/* Chart 4: Product Level Competition */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Product Level Competition</h4>
+                    {analysisData.charts.productLevelCompetition.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Competition Data</div>
+                    ) : (
+                      <svg viewBox="0 0 400 250" width="100%" height="220">
+                        {(() => {
+                          const data = analysisData.charts.productLevelCompetition;
+                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                          return data.map((d: any, idx: number) => {
+                            const barWidth = (d.count / maxVal) * 220;
+                            const y = idx * 24 + 20;
+                            return (
+                              <g key={idx}>
+                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
+                                </text>
+                                <motion.rect
+                                  x="110"
+                                  y={y}
+                                  height="14"
+                                  rx="4"
+                                  fill="#3c7cb5"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: barWidth }}
+                                  transition={{ duration: 1, ease: 'easeOut' }}
+                                />
+                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.count}
+                                </text>
+                              </g>
+                            );
+                          });
+                        })()}
+                      </svg>
+                    )}
+                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                      * Total of Products listed by Its Phase Wise.
+                    </span>
+                  </div>
+
+                  {/* Chart 5: Country Wise Analysis */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Country Wise Analysis</h4>
+                    {analysisData.charts.countryWiseAnalysis.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Country Data</div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', height: '100%' }}>
+                        <svg viewBox="0 0 160 160" width="130" height="130">
+                          <defs>
+                            <clipPath id="pie-clip">
+                              <motion.circle
+                                cx="80"
+                                cy="80"
+                                r="55"
+                                fill="transparent"
+                                stroke="#ffffff"
+                                strokeWidth="22"
+                                initial={{ strokeDashoffset: 346, strokeDasharray: 346 }}
+                                animate={{ strokeDashoffset: 0 }}
+                                transition={{ duration: 1.2, ease: 'easeInOut' }}
+                                transform="rotate(-90 80 80)"
+                              />
+                            </clipPath>
+                          </defs>
+                          <g clipPath="url(#pie-clip)">
+                            {(() => {
+                              const data = analysisData.charts.countryWiseAnalysis;
+                              const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
+                              let accumulatedPercent = 0;
+                              const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+                              
+                              return data.map((d: any, idx: number) => {
+                                const percent = d.count / total;
+                                const radius = 55;
+                                const circumference = 2 * Math.PI * radius;
+                                const strokeDash = circumference * percent;
+                                const strokeGap = circumference - strokeDash;
+                                const strokeOffset = circumference * (1 - accumulatedPercent);
+                                accumulatedPercent += percent;
+                                const color = COLORS[idx % COLORS.length];
+
+                                return (
+                                  <circle
+                                    key={idx}
+                                    cx="80"
+                                    cy="80"
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke={color}
+                                    strokeWidth="20"
+                                    strokeDasharray={`${strokeDash} ${strokeGap}`}
+                                    strokeDashoffset={strokeOffset}
+                                    transform="rotate(-90 80 80)"
+                                  />
+                                );
+                              });
+                            })()}
+                          </g>
+                          <circle cx="80" cy="80" r="45" fill="var(--bg-surface)" />
+                        </svg>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexGrow: 1 }}>
+                          {(() => {
+                            const data = analysisData.charts.countryWiseAnalysis;
+                            const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
+                            const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+                            return data.map((d: any, idx: number) => {
+                              const percent = ((d.count / total) * 100).toFixed(1);
+                              return (
+                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 700 }}>
+                                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[idx % COLORS.length], display: 'inline-block' }}></span>
+                                  <span style={{ color: 'var(--text-main)', width: '60px' }}>{d.country}</span>
+                                  <span style={{ color: 'var(--text-light)' }}>{percent}% ({d.count})</span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chart 6: Therapeutic Area Breakdown */}
+                  <div className="chart-container">
+                    <h4 className="chart-header">Therapeutic Area</h4>
+                    {analysisData.charts.therapeuticAreaBreakdown.length === 0 ? (
+                      <div style={{ textAlign: 'center', margin: 'auto', padding: '20px', color: 'var(--text-light)' }}>No Therapeutic Area Data</div>
+                    ) : (
+                      <svg viewBox="0 0 400 250" width="100%" height="220">
+                        {(() => {
+                          const data = analysisData.charts.therapeuticAreaBreakdown.slice(0, 8);
+                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                          return data.map((d: any, idx: number) => {
+                            const barWidth = (d.count / maxVal) * 220;
+                            const y = idx * 24 + 20;
+                            return (
+                              <g key={idx}>
+                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.therapeuticArea.length > 15 ? d.therapeuticArea.substring(0, 12) + '...' : d.therapeuticArea}
+                                </text>
+                                <motion.rect
+                                  x="110"
+                                  y={y}
+                                  height="14"
+                                  rx="4"
+                                  fill="#3c7cb5"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: barWidth }}
+                                  transition={{ duration: 1, ease: 'easeOut' }}
+                                />
+                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
+                                  {d.count}
+                                </text>
+                              </g>
+                            );
+                          });
+                        })()}
+                      </svg>
+                    )}
+                  </div>
+
+                </div>
+              </>
+            ) : (
+              <div className="card" style={{ padding: '40px', textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  No analysis statistics available for this query.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Modal 1: Sales Forecasting Breakdown */}
+          {showSalesModal && analysisData && (
+            <div className="modal-overlay" onClick={() => setShowSalesModal(false)}>
+              <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowSalesModal(false)}>&times;</button>
+                <h4 className="modal-title">💰 Sales Forecasting Analysis</h4>
+                <div style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6' }}>
+                  <p style={{ marginBottom: '16px' }}>
+                    Below is the aggregated sales forecasting data for matching molecular drug brand formulations.
+                  </p>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-alt)', borderBottom: '1.5px solid var(--border)' }}>
+                          <th style={{ padding: '10px', textAlign: 'left', fontWeight: '800' }}>Metric</th>
+                          <th style={{ padding: '10px', textAlign: 'right', fontWeight: '800' }}>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid var(--border-muted)' }}>
+                          <td style={{ padding: '10px', fontWeight: '600' }}>Total Cumulative Sales</td>
+                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: 'var(--success)' }}>
+                            ${analysisData.metrics.totalSalesMillions.toLocaleString()} MN
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid var(--border-muted)' }}>
+                          <td style={{ padding: '10px', fontWeight: '600' }}>Marketed Molecules Count</td>
+                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800' }}>
+                            {analysisData.metrics.marketedDrug}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '10px', fontWeight: '600' }}>Avg Revenue Per Product</td>
+                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800' }}>
+                            ${analysisData.metrics.marketedDrug > 0 ? (analysisData.metrics.totalSalesMillions / analysisData.metrics.marketedDrug).toFixed(2) : '0.00'} MN
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal 2: Clinical Trial Result Status Breakdown */}
+          {showResultModal && analysisData && (
+            <div className="modal-overlay" onClick={() => setShowResultModal(false)}>
+              <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowResultModal(false)}>&times;</button>
+                <h4 className="modal-title">📋 Clinical Trial Status Breakdown</h4>
+                <div style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6' }}>
+                  <p style={{ marginBottom: '16px' }}>
+                    Aggregated distribution of matching clinical trial candidates by their active registry execution status.
+                  </p>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-alt)', borderBottom: '1.5px solid var(--border)' }}>
+                          <th style={{ padding: '10px', textAlign: 'left', fontWeight: '800' }}>Trial Status</th>
+                          <th style={{ padding: '10px', textAlign: 'right', fontWeight: '800' }}>Total Candidates</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(analysisData.metrics.trialStatusMap).map(([status, count]: any, idx) => (
+                          <tr key={idx} style={{ borderBottom: idx < Object.keys(analysisData.metrics.trialStatusMap).length - 1 ? '1px solid var(--border-muted)' : 'none' }}>
+                            <td style={{ padding: '10px', fontWeight: '600' }}>{status}</td>
+                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', color: 'var(--primary)' }}>
+                              {count}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal 3: Contacts List */}
+          {showContactModal && analysisData && (
+            <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+              <div className="modal-box" style={{ maxWidth: '650px', width: '95%', maxHeight: '80vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setShowContactModal(false)}>&times;</button>
+                <h4 className="modal-title">📖 Clinical Investigators &amp; Contacts</h4>
+                <div style={{ color: 'var(--text-main)', fontSize: '14px', lineHeight: '1.6' }}>
+                  <p style={{ marginBottom: '16px' }}>
+                    Below is the list of primary clinical trial investigators, study directors, and contact personnel found for the matching active pipeline studies.
+                  </p>
+                  
+                  {!analysisData.metrics.contacts || analysisData.metrics.contacts.length === 0 ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)', border: '1px dashed var(--border-muted)', borderRadius: '12px' }}>
+                      No contact details available for this search query.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {analysisData.metrics.contacts.map((contact: any, index: number) => (
+                        <div 
+                          key={index} 
+                          style={{ 
+                            border: '1.5px solid var(--border)', 
+                            borderRadius: '12px', 
+                            padding: '14px', 
+                            backgroundColor: 'var(--bg-surface)',
+                            boxShadow: '2px 2px 0px 0px var(--border)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
+                            <strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{contact.name}</strong>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '2px 6px', 
+                                borderRadius: '4px', 
+                                backgroundColor: 'var(--accent-light)', 
+                                color: 'var(--warning)', 
+                                border: '1px solid var(--accent)',
+                                fontWeight: 700
+                              }}
+                            >
+                              {contact.role}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '4px', fontStyle: 'italic' }}>
+                            Study: {contact.trial}
+                          </div>
+                          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px', flexWrap: 'wrap' }}>
+                            {contact.email && contact.email !== 'N/A' && (
+                              <span>✉️ <a href={`mailto:${contact.email}`} style={{ textDecoration: 'underline', color: '#ff7a00', fontWeight: 600 }}>{contact.email}</a></span>
+                            )}
+                            {contact.phone && contact.phone !== 'N/A' && (
+                              <span>📞 <span style={{ fontWeight: 600 }}>{contact.phone}</span></span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CSS Styles injection */}
+          <style>{`
+            .analysis-section {
+              margin-bottom: 40px;
+              background: transparent;
+            }
+            .analysis-title {
+              font-size: 22px;
+              font-weight: 800;
+              margin-bottom: 20px;
+              color: var(--text-main);
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .unified-metrics-card {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              background-color: var(--bg-surface);
+              border: 1.5px solid var(--border);
+              border-radius: var(--radius-sm, 16px);
+              box-shadow: var(--shadow-md, 3px 3px 0px 0px var(--border));
+              margin-bottom: 32px;
+              overflow: hidden;
+            }
+            @media (max-width: 1024px) {
+              .unified-metrics-card {
+                grid-template-columns: repeat(3, 1fr);
+              }
+            }
+            @media (max-width: 768px) {
+              .unified-metrics-card {
+                grid-template-columns: repeat(2, 1fr);
+              }
+            }
+            @media (max-width: 480px) {
+              .unified-metrics-card {
+                grid-template-columns: 1fr;
+              }
+            }
+            .metric-slot {
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              padding: 20px;
+              border-right: 1px dashed var(--border-muted, #e2e2de);
+              border-bottom: 1px dashed var(--border-muted, #e2e2de);
+              transition: background-color 0.2s;
+            }
+            .metric-slot:hover {
+              background-color: rgba(243, 208, 123, 0.05);
+            }
+            .skeleton-pulse {
+              display: inline-block;
+              height: 22px;
+              width: 50px;
+              background-color: var(--bg-alt, #e9e9e7);
+              animation: pulse 1.5s ease-in-out infinite;
+              border-radius: 4px;
+            }
+            @keyframes pulse {
+              0% {
+                opacity: 0.6;
+              }
+              50% {
+                opacity: 1;
+              }
+              100% {
+                opacity: 0.6;
+              }
+            }
+            .metric-icon-box {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 44px;
+              height: 44px;
+              border-radius: 12px;
+              font-size: 18px;
+              flex-shrink: 0;
+              border: 1.5px solid var(--border);
+            }
+            .metric-content {
+              display: flex;
+              flex-direction: column;
+            }
+            .metric-value {
+              font-size: 18px;
+              font-weight: 800;
+              color: var(--text-main);
+              line-height: 1.2;
+            }
+            .metric-label {
+              font-size: 11px;
+              font-weight: 600;
+              color: var(--text-light);
+              margin-top: 2px;
+            }
+            .metric-action {
+              font-size: 11px;
+              font-weight: 700;
+              color: #ff7a00;
+              cursor: pointer;
+              text-decoration: underline;
+              margin-top: 2px;
+            }
+            .charts-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 24px;
+            }
+            @media (max-width: 992px) {
+              .charts-grid {
+                grid-template-columns: 1fr;
+              }
+            }
+            .chart-container {
+              background-color: var(--bg-surface);
+              border: 1.5px solid var(--border);
+              border-radius: 20px;
+              padding: 20px;
+              box-shadow: 4px 4px 0px 0px var(--border);
+              display: flex;
+              flex-direction: column;
+            }
+            .chart-header {
+              font-size: 15px;
+              font-weight: 800;
+              margin-bottom: 16px;
+              text-align: center;
+              border-bottom: 1.5px solid var(--border);
+              padding-bottom: 8px;
+              color: var(--text-main);
+            }
+            .modal-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background-color: rgba(0, 0, 0, 0.4);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 1000;
+              backdrop-filter: blur(4px);
+            }
+            .modal-box {
+              background-color: var(--bg-surface);
+              border: 2px solid var(--border);
+              border-radius: 20px;
+              width: 90%;
+              max-width: 500px;
+              padding: 24px;
+              box-shadow: 6px 6px 0px 0px var(--border);
+              position: relative;
+            }
+            .modal-title {
+              font-size: 18px;
+              font-weight: 800;
+              margin-bottom: 16px;
+              border-bottom: 1.5px solid var(--border);
+              padding-bottom: 8px;
+            }
+            .modal-close {
+              position: absolute;
+              top: 16px;
+              right: 16px;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              font-weight: 800;
+            }
+          `}</style>
+
           <div className="grid-header-actions">
             <div className="grid-results-count">
               Found <strong>{filteredMedicines.length}</strong> matching records in <strong>{datasetParam}</strong>
