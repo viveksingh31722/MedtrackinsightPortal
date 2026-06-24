@@ -778,7 +778,12 @@ function SearchResultsContent() {
             {/* Unified Metrics Card - Always displayed, showing loaders when data is loading */}
             <div className="unified-metrics-card">
               {/* Card 1: Product Trial */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'var(--success-light)', color: 'var(--success)' }}>
                   🔬
                 </div>
@@ -792,10 +797,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Product Trial</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 2: Product Type */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'var(--danger-light)', color: 'var(--danger)' }}>
                   📦
                 </div>
@@ -809,10 +819,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Product Type</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 3: Biomarker/MOA */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'var(--warning-light)', color: 'var(--warning)' }}>
                   ⏳
                 </div>
@@ -826,10 +841,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Biomarker/MOA</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 4: Therapeutic Area */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', color: 'rgb(236, 72, 153)' }}>
                   ❤️
                 </div>
@@ -843,10 +863,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Therapeutic Area</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 5: Sponsor */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'rgb(59, 130, 246)' }}>
                   🏢
                 </div>
@@ -860,10 +885,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Sponsor</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 6: Pipeline Candidates */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: 'rgb(139, 92, 246)' }}>
                   📈
                 </div>
@@ -877,10 +907,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Pipeline Candidates</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 7: Marketed Drug */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(6, 182, 212, 0.1)', color: 'rgb(6, 182, 212)' }}>
                   🛍️
                 </div>
@@ -894,10 +929,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Marketed Drug</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 8: Available For Licensing */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', color: 'rgb(168, 85, 247)' }}>
                   📄
                 </div>
@@ -911,10 +951,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Available For Licensing</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 9: Biological Class */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'rgb(16, 185, 129)' }}>
                   🧬
                 </div>
@@ -928,10 +973,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Biological Class</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 10: Patent Expiry */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'rgb(239, 68, 68)' }}>
                   📅
                 </div>
@@ -945,10 +995,15 @@ function SearchResultsContent() {
                   </span>
                   <span className="metric-label">Patent Expiry</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 11: Sales Data */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'rgb(245, 158, 11)' }}>
                   💰
                 </div>
@@ -964,10 +1019,15 @@ function SearchResultsContent() {
                     <span className="metric-action" onClick={() => setShowSalesModal(true)}>Click to view</span>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 12: Contact */}
-              <div className="metric-slot">
+              <motion.div 
+                className="metric-slot"
+                whileHover={{ backgroundColor: 'rgba(243, 208, 123, 0.08)', scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="metric-icon-box" style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', color: 'rgb(236, 72, 153)' }}>
                   📖
                 </div>
@@ -983,12 +1043,12 @@ function SearchResultsContent() {
                     <span className="metric-action" onClick={() => setShowContactModal(true)}>Click to view</span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {analysisLoading ? (
               <div className="card" style={{ padding: '60px', textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ fontSize: '15px', color: 'var(--text-light)' }}>Loading visual analysis charts...</div>
+                <div style={{ fontSize: '15px', color: 'var(--text-light)' }}>Loading visual analysis chart metrics...</div>
               </div>
             ) : analysisData ? (
               <>
@@ -1001,36 +1061,43 @@ function SearchResultsContent() {
                     ) : (
                       <svg viewBox="0 0 400 250" width="100%" height="220">
                         {(() => {
-                          const data = analysisData.charts.pipelineByPhase;
-                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
-                          return data.map((d: any, idx: number) => {
-                            const barWidth = (d.count / maxVal) * 220;
-                            const y = idx * 24 + 20;
-                            return (
-                              <g key={idx}>
-                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
-                                </text>
-                                <motion.rect
-                                  x="110"
-                                  y={y}
-                                  height="14"
-                                  rx="4"
-                                  fill="#3c7cb5"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: barWidth }}
-                                  transition={{ duration: 1, ease: 'easeOut' }}
-                                />
-                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.count}
-                                </text>
-                              </g>
-                            );
-                          });
+                           const data = analysisData.charts.pipelineByPhase;
+                           const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                           return data.map((d: any, idx: number) => {
+                             const barWidth = (d.count / maxVal) * 190;
+                             const y = idx * 24 + 20;
+                             return (
+                               <motion.g 
+                                 key={idx}
+                                 whileHover={{ x: 6 }}
+                                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                 style={{ cursor: 'pointer' }}
+                               >
+                                 <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
+                                 </text>
+                                 <motion.rect
+                                   x="140"
+                                   y={y}
+                                   height="14"
+                                   rx="4"
+                                   fill="#3c7cb5"
+                                   style={{ originX: 0 }}
+                                   initial={{ width: 0 }}
+                                   animate={{ width: barWidth }}
+                                   whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
+                                   transition={{ duration: 0.15 }}
+                                 />
+                                 <text x={145 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.count}
+                                 </text>
+                               </motion.g>
+                             );
+                           });
                         })()}
                       </svg>
                     )}
-                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
                       * Includes only unique trials. Highest Phase based on Product+Indication.
                     </span>
                   </div>
@@ -1043,36 +1110,43 @@ function SearchResultsContent() {
                     ) : (
                       <svg viewBox="0 0 400 250" width="100%" height="220">
                         {(() => {
-                          const data = analysisData.charts.topSponsors;
-                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
-                          return data.map((d: any, idx: number) => {
-                            const barWidth = (d.count / maxVal) * 200;
-                            const y = idx * 24 + 20;
-                            return (
-                              <g key={idx}>
-                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.sponsor.length > 18 ? d.sponsor.substring(0, 15) + '...' : d.sponsor}
-                                </text>
-                                <motion.rect
-                                  x="130"
-                                  y={y}
-                                  height="14"
-                                  rx="4"
-                                  fill="#3c7cb5"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: barWidth }}
-                                  transition={{ duration: 1, ease: 'easeOut' }}
-                                />
-                                <text x={135 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.count}
-                                </text>
-                              </g>
-                            );
-                          });
+                           const data = analysisData.charts.topSponsors;
+                           const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                           return data.map((d: any, idx: number) => {
+                             const barWidth = (d.count / maxVal) * 190;
+                             const y = idx * 24 + 20;
+                             return (
+                               <motion.g 
+                                 key={idx}
+                                 whileHover={{ x: 6 }}
+                                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                 style={{ cursor: 'pointer' }}
+                               >
+                                 <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.sponsor.length > 18 ? d.sponsor.substring(0, 15) + '...' : d.sponsor}
+                                 </text>
+                                 <motion.rect
+                                   x="140"
+                                   y={y}
+                                   height="14"
+                                   rx="4"
+                                   fill="#3c7cb5"
+                                   style={{ originX: 0 }}
+                                   initial={{ width: 0 }}
+                                   animate={{ width: barWidth }}
+                                   whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
+                                   transition={{ duration: 0.15 }}
+                                 />
+                                 <text x={145 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.count}
+                                 </text>
+                               </motion.g>
+                             );
+                           });
                         })()}
                       </svg>
                     )}
-                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
                       * Top 8 Sponsor Analysis based on Indication.
                     </span>
                   </div>
@@ -1085,68 +1159,73 @@ function SearchResultsContent() {
                     ) : (
                       <svg viewBox="0 0 400 220" width="100%" height="200">
                         {(() => {
-                          const data = analysisData.charts.predictionOfLaunch;
-                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
-                          const width = 340;
-                          const height = 140;
-                          const points = data.map((d: any, idx: number) => {
-                            const x = (idx / Math.max(data.length - 1, 1)) * width + 40;
-                            const y = height - (d.count / maxVal) * (height - 30) + 20;
-                            return { x, y, year: d.year, count: d.count };
-                          });
+                           const data = analysisData.charts.predictionOfLaunch;
+                           const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                           const width = 340;
+                           const height = 140;
+                           const points = data.map((d: any, idx: number) => {
+                             const x = (idx / Math.max(data.length - 1, 1)) * width + 40;
+                             const y = height - (d.count / maxVal) * (height - 30) + 20;
+                             return { x, y, year: d.year, count: d.count };
+                           });
 
-                          const pathD = points.map((p: any, idx: number) => 
-                            `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-                          ).join(' ');
+                           const pathD = points.map((p: any, idx: number) => 
+                             `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+                           ).join(' ');
 
-                          const areaD = points.length > 0 
-                            ? `${pathD} L ${points[points.length - 1].x} ${height + 20} L ${points[0].x} ${height + 20} Z`
-                            : '';
+                           const areaD = points.length > 0 
+                             ? `${pathD} L ${points[points.length - 1].x} ${height + 20} L ${points[0].x} ${height + 20} Z`
+                             : '';
 
-                          return (
-                            <g>
-                              {/* Grid lines */}
-                              <line x1="40" y1={height + 20} x2={width + 40} y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
-                              <line x1="40" y1="20" x2="40" y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
-                              
-                              <defs>
-                                <clipPath id="prediction-clip">
-                                  <motion.rect
-                                    x="0"
-                                    y="0"
-                                    height="220"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: 400 }}
-                                    transition={{ duration: 1.2, ease: 'easeOut' }}
-                                  />
-                                </clipPath>
-                              </defs>
-                              <g clipPath="url(#prediction-clip)">
-                                {/* Filled Area */}
-                                {areaD && <path d={areaD} fill="rgba(243, 112, 33, 0.12)" />}
+                           return (
+                             <g>
+                               {/* Grid lines */}
+                               <line x1="40" y1={height + 20} x2={width + 40} y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
+                               <line x1="40" y1="20" x2="40" y2={height + 20} stroke="var(--border-muted)" strokeWidth="1" />
+                               
+                               <defs>
+                                 <clipPath id="prediction-clip">
+                                   <motion.rect
+                                     x="0"
+                                     y="0"
+                                     height="220"
+                                     initial={{ width: 0 }}
+                                     animate={{ width: 400 }}
+                                     transition={{ duration: 1.2, ease: 'easeOut' }}
+                                   />
+                                 </clipPath>
+                               </defs>
+                               <g clipPath="url(#prediction-clip)">
+                                 {/* Filled Area */}
+                                 {areaD && <path d={areaD} fill="rgba(243, 112, 33, 0.12)" />}
 
-                                {/* Trend line */}
-                                {pathD && <path d={pathD} fill="none" stroke="#ff7a00" strokeWidth="2.5" />}
+                                 {/* Trend line */}
+                                 {pathD && <path d={pathD} fill="none" stroke="#ff7a00" strokeWidth="2.5" />}
 
-                                {/* Points & Labels */}
-                                {points.map((p: any, idx: number) => (
-                                  <g key={idx}>
-                                    <circle cx={p.x} cy={p.y} r="3.5" fill="var(--bg-surface)" stroke="#ff7a00" strokeWidth="2" />
-                                    <text x={p.x} y={height + 34} fill="var(--text-light)" fontSize="8" fontWeight="700" textAnchor="middle">
-                                      {p.year}
-                                    </text>
-                                    <text x={p.x} y={p.y - 6} fill="var(--text-main)" fontSize="8" fontWeight="800" textAnchor="middle">
-                                      {p.count}
-                                    </text>
-                                  </g>
-                                ))}
-                              </g>
-                            </g>
-                          );
+                                 {/* Points & Labels */}
+                                 {points.map((p: any, idx: number) => (
+                                   <motion.g 
+                                     key={idx}
+                                     whileHover={{ scale: 1.35 }}
+                                     transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                     style={{ transformOrigin: `${p.x}px ${p.y}px`, cursor: 'pointer' }}
+                                   >
+                                     <circle cx={p.x} cy={p.y} r="4.5" fill="var(--bg-surface)" stroke="#ff7a00" strokeWidth="2.5" />
+                                     <text x={p.x} y={height + 34} fill="var(--text-light)" fontSize="11" fontWeight="700" textAnchor="middle">
+                                       {p.year}
+                                     </text>
+                                     <text x={p.x} y={p.y - 8} fill="var(--text-main)" fontSize="11" fontWeight="800" textAnchor="middle">
+                                       {p.count}
+                                     </text>
+                                   </motion.g>
+                                 ))}
+                               </g>
+                             </g>
+                           );
                         })()}
                       </svg>
                     )}
-                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
                       * Products Over Years based on Product, Indication.
                     </span>
                   </div>
@@ -1159,36 +1238,43 @@ function SearchResultsContent() {
                     ) : (
                       <svg viewBox="0 0 400 250" width="100%" height="220">
                         {(() => {
-                          const data = analysisData.charts.productLevelCompetition;
-                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
-                          return data.map((d: any, idx: number) => {
-                            const barWidth = (d.count / maxVal) * 220;
-                            const y = idx * 24 + 20;
-                            return (
-                              <g key={idx}>
-                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
-                                </text>
-                                <motion.rect
-                                  x="110"
-                                  y={y}
-                                  height="14"
-                                  rx="4"
-                                  fill="#3c7cb5"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: barWidth }}
-                                  transition={{ duration: 1, ease: 'easeOut' }}
-                                />
-                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.count}
-                                </text>
-                              </g>
-                            );
-                          });
+                           const data = analysisData.charts.productLevelCompetition;
+                           const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                           return data.map((d: any, idx: number) => {
+                             const barWidth = (d.count / maxVal) * 190;
+                             const y = idx * 24 + 20;
+                             return (
+                               <motion.g 
+                                 key={idx}
+                                 whileHover={{ x: 6 }}
+                                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                 style={{ cursor: 'pointer' }}
+                               >
+                                 <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
+                                 </text>
+                                 <motion.rect
+                                   x="140"
+                                   y={y}
+                                   height="14"
+                                   rx="4"
+                                   fill="#3c7cb5"
+                                   style={{ originX: 0 }}
+                                   initial={{ width: 0 }}
+                                   animate={{ width: barWidth }}
+                                   whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
+                                   transition={{ duration: 0.15 }}
+                                 />
+                                 <text x={145 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.count}
+                                 </text>
+                               </motion.g>
+                             );
+                           });
                         })()}
                       </svg>
                     )}
-                    <span style={{ fontSize: '10px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center', marginTop: '10px' }}>
                       * Total of Products listed by Its Phase Wise.
                     </span>
                   </div>
@@ -1219,36 +1305,39 @@ function SearchResultsContent() {
                           </defs>
                           <g clipPath="url(#pie-clip)">
                             {(() => {
-                              const data = analysisData.charts.countryWiseAnalysis;
-                              const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
-                              let accumulatedPercent = 0;
-                              const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-                              
-                              return data.map((d: any, idx: number) => {
-                                const percent = d.count / total;
-                                const radius = 55;
-                                const circumference = 2 * Math.PI * radius;
-                                const strokeDash = circumference * percent;
-                                const strokeGap = circumference - strokeDash;
-                                const strokeOffset = circumference * (1 - accumulatedPercent);
-                                accumulatedPercent += percent;
-                                const color = COLORS[idx % COLORS.length];
+                               const data = analysisData.charts.countryWiseAnalysis;
+                               const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
+                               let accumulatedPercent = 0;
+                               const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+                               
+                               return data.map((d: any, idx: number) => {
+                                 const percent = d.count / total;
+                                 const radius = 55;
+                                 const circumference = 2 * Math.PI * radius;
+                                 const strokeDash = circumference * percent;
+                                 const strokeGap = circumference - strokeDash;
+                                 const strokeOffset = circumference * (1 - accumulatedPercent);
+                                 accumulatedPercent += percent;
+                                 const color = COLORS[idx % COLORS.length];
 
-                                return (
-                                  <circle
-                                    key={idx}
-                                    cx="80"
-                                    cy="80"
-                                    r={radius}
-                                    fill="transparent"
-                                    stroke={color}
-                                    strokeWidth="20"
-                                    strokeDasharray={`${strokeDash} ${strokeGap}`}
-                                    strokeDashoffset={strokeOffset}
-                                    transform="rotate(-90 80 80)"
-                                  />
-                                );
-                              });
+                                 return (
+                                   <motion.circle
+                                     key={idx}
+                                     cx="80"
+                                     cy="80"
+                                     r={radius}
+                                     fill="transparent"
+                                     stroke={color}
+                                     strokeWidth="20"
+                                     strokeDasharray={`${strokeDash} ${strokeGap}`}
+                                     strokeDashoffset={strokeOffset}
+                                     transform="rotate(-90 80 80)"
+                                     whileHover={{ strokeWidth: 26, filter: 'brightness(1.15)' }}
+                                     transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                                     style={{ cursor: 'pointer', transformOrigin: '80px 80px' }}
+                                   />
+                                 );
+                               });
                             })()}
                           </g>
                           <circle cx="80" cy="80" r="45" fill="var(--bg-surface)" />
@@ -1256,19 +1345,24 @@ function SearchResultsContent() {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexGrow: 1 }}>
                           {(() => {
-                            const data = analysisData.charts.countryWiseAnalysis;
-                            const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
-                            const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-                            return data.map((d: any, idx: number) => {
-                              const percent = ((d.count / total) * 100).toFixed(1);
-                              return (
-                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 700 }}>
-                                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[idx % COLORS.length], display: 'inline-block' }}></span>
-                                  <span style={{ color: 'var(--text-main)', width: '60px' }}>{d.country}</span>
-                                  <span style={{ color: 'var(--text-light)' }}>{percent}% ({d.count})</span>
-                                </div>
-                              );
-                            });
+                             const data = analysisData.charts.countryWiseAnalysis;
+                             const total = data.reduce((acc: number, d: any) => acc + d.count, 0) || 1;
+                             const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+                             return data.map((d: any, idx: number) => {
+                               const percent = ((d.count / total) * 100).toFixed(1);
+                               return (
+                                 <motion.div 
+                                   key={idx} 
+                                   whileHover={{ x: 4, scale: 1.02 }}
+                                   transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                   style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                                 >
+                                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[idx % COLORS.length], display: 'inline-block' }}></span>
+                                   <span style={{ color: 'var(--text-main)', width: '60px' }}>{d.country}</span>
+                                   <span style={{ color: 'var(--text-light)' }}>{percent}% ({d.count})</span>
+                                 </motion.div>
+                               );
+                             });
                           })()}
                         </div>
                       </div>
@@ -1283,32 +1377,39 @@ function SearchResultsContent() {
                     ) : (
                       <svg viewBox="0 0 400 250" width="100%" height="220">
                         {(() => {
-                          const data = analysisData.charts.therapeuticAreaBreakdown.slice(0, 8);
-                          const maxVal = Math.max(...data.map((d: any) => d.count), 1);
-                          return data.map((d: any, idx: number) => {
-                            const barWidth = (d.count / maxVal) * 220;
-                            const y = idx * 24 + 20;
-                            return (
-                              <g key={idx}>
-                                <text x="10" y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.therapeuticArea.length > 15 ? d.therapeuticArea.substring(0, 12) + '...' : d.therapeuticArea}
-                                </text>
-                                <motion.rect
-                                  x="110"
-                                  y={y}
-                                  height="14"
-                                  rx="4"
-                                  fill="#3c7cb5"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: barWidth }}
-                                  transition={{ duration: 1, ease: 'easeOut' }}
-                                />
-                                <text x={115 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="10" fontWeight="700">
-                                  {d.count}
-                                </text>
-                              </g>
-                            );
-                          });
+                           const data = analysisData.charts.therapeuticAreaBreakdown.slice(0, 8);
+                           const maxVal = Math.max(...data.map((d: any) => d.count), 1);
+                           return data.map((d: any, idx: number) => {
+                             const barWidth = (d.count / maxVal) * 190;
+                             const y = idx * 24 + 20;
+                             return (
+                               <motion.g 
+                                 key={idx}
+                                 whileHover={{ x: 6 }}
+                                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                 style={{ cursor: 'pointer' }}
+                               >
+                                 <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.therapeuticArea.length > 15 ? d.therapeuticArea.substring(0, 12) + '...' : d.therapeuticArea}
+                                 </text>
+                                 <motion.rect
+                                   x="140"
+                                   y={y}
+                                   height="14"
+                                   rx="4"
+                                   fill="#3c7cb5"
+                                   style={{ originX: 0 }}
+                                   initial={{ width: 0 }}
+                                   animate={{ width: barWidth }}
+                                   whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
+                                   transition={{ duration: 0.15 }}
+                                 />
+                                 <text x={145 + barWidth} y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
+                                   {d.count}
+                                 </text>
+                               </motion.g>
+                             );
+                           });
                         })()}
                       </svg>
                     )}
@@ -1585,7 +1686,7 @@ function SearchResultsContent() {
                 grid-template-columns: 1fr;
               }
             }
-            .chart-container {
+             .chart-container {
               background-color: var(--bg-surface);
               border: 1.5px solid var(--border);
               border-radius: 20px;
@@ -1593,6 +1694,11 @@ function SearchResultsContent() {
               box-shadow: 4px 4px 0px 0px var(--border);
               display: flex;
               flex-direction: column;
+              transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+            }
+            .chart-container:hover {
+              transform: translateY(-5px) scale(1.015);
+              box-shadow: 8px 8px 0px 0px var(--border);
             }
             .chart-header {
               font-size: 15px;
