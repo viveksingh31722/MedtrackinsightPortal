@@ -6,8 +6,15 @@ import { authRoutes } from './routes/auth.routes';
 import { medicineRoutes } from './routes/medicine.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 
 const app = express();
+
+// Trust proxy for rate limiting (first hop)
+app.set('trust proxy', 1);
+
+// Apply global rate limiting to all requests
+app.use(generalLimiter);
 
 // CORS concept: Cross-Origin Resource Sharing.
 // Since our Next.js frontend runs on localhost:3000 and the Express backend runs on localhost:5000,
@@ -31,8 +38,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date() });
 });
 
-// Mounting API Router Layers
-app.use('/api/auth', authRoutes);
+// Mounting API Router Layers with specific auth rate limiter
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/medicine', medicineRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);

@@ -30,9 +30,12 @@ export const sendOtpEmail = async (
   console.log('======================================================\n');
 
   try {
-    const fs = require('fs');
-    fs.writeFileSync('d:/MedtrackinsightPortal/frontend/public/otp.txt', otp);
-    console.log(`[DEVELOPMENT] Saved OTP ${otp} to frontend public/otp.txt`);
+    if (process.env.NODE_ENV !== 'production') {
+      const fs = require('fs');
+      const otpPath = path.resolve(__dirname, '../../../frontend/public/otp.txt');
+      fs.writeFileSync(otpPath, otp);
+      console.log(`[DEVELOPMENT] Saved OTP ${otp} to frontend public/otp.txt`);
+    }
   } catch (writeErr) {
     console.error('Error writing otp.txt:', writeErr);
   }
