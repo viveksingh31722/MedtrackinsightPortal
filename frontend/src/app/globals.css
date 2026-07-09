@@ -1494,3 +1494,29 @@ select.form-input {
   }
 }
 
+/* Modern Loading Spinner */
+.spinner-loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin-loader 0.8s linear infinite;
+  display: inline-block;
+}
+
+.spinner-loader-dark {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #ff7a00; /* Warm orange theme highlight */
+  animation: spin-loader 0.8s linear infinite;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+@keyframes spin-loader {
+  to { transform: rotate(360deg); }
+}
+

@@ -17,11 +17,18 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    const { planType } = req.body; // e.g., 'Pro' ($1,499) or 'Basic' ($499)
-    let amount = 149900; // Default: Pro Plan in Paise (Rs 1,499.00)
-    
-    if (planType === 'Basic') {
-      amount = 49900; // Basic Plan in Paise (Rs 499.00)
+    // Support custom order amount input or fallback to planType defaults
+    let amount = req.body.amount;
+    if (amount !== undefined) {
+      if (typeof amount !== 'number' || amount < 100) {
+        return res.status(400).json({ message: 'Amount must be at least 100 paise' });
+      }
+    } else {
+      const { planType } = req.body; // e.g., 'Pro' ($1,499) or 'Basic' ($499)
+      amount = 149900; // Default: Pro Plan in Paise (Rs 1,499.00)
+      if (planType === 'Basic') {
+        amount = 49900; // Basic Plan in Paise (Rs 499.00)
+      }
     }
 
     const receiptId = `receipt_usr_${req.user.userId.slice(0, 8)}_${Date.now().toString().slice(-6)}`;
@@ -39,9 +46,8 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    // Try creating actual order using Razorpay SDK if keys are provided
+    // Create actual order using Razorpay SDK
     try {
-      // Import razorpay dynamically so server starts even if library not loaded or broken
       const Razorpay = require('razorpay');
       const rzp = new Razorpay({
         key_id: env.RAZORPAY_KEY_ID,
@@ -60,15 +66,8 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
         key: env.RAZORPAY_KEY_ID,
       });
     } catch (sdkError: any) {
-      console.warn('Razorpay SDK initialization failed, falling back to simulated checkout.', sdkError.message);
-      return res.status(200).json({
-        id: `order_sim_${crypto.randomBytes(8).toString('hex')}`,
-        amount,
-        currency: 'INR',
-        receipt: receiptId,
-        isSandbox: true,
-        key: env.RAZORPAY_KEY_ID,
-      });
+      console.error('Razorpay SDK order creation failed:', sdkError.message);
+      return res.status(500).json({ message: 'Razorpay API Error: Failed to initiate payment order' });
     }
   } catch (error) {
     console.error('Create order error:', error);
@@ -83,6 +82,11 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, isSandbox } = req.body;
+
+    // Validate missing fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ message: 'Missing required validation fields' });
+    }
 
     let verificationSuccess = false;
 

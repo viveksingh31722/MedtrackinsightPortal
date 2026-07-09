@@ -47,7 +47,7 @@ function AnimatedCounter({ value }: { value: number }) {
 function SearchResultsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { apiBaseUrl, user, showToast } = useApp();
+  const { apiBaseUrl, user, showToast, apiFetch } = useApp();
 
   // Search parameters from URL
   const queryParam = searchParams.get('query') || '';
@@ -226,10 +226,18 @@ function SearchResultsContent() {
         diseases: currentDiseases.join(','),
       });
 
-      const res = await fetch(`${apiBaseUrl}/medicine/analysis?${params.toString()}`);
+      const res = await apiFetch(`${apiBaseUrl}/medicine/analysis?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setAnalysisData(data);
+        // Cache analysis results
+        sessionStorage.setItem('cachedSearchAnalysis', JSON.stringify({
+          analysisData: data,
+          queryParam,
+          fieldParam,
+          countries: currentCountries.join(','),
+          diseases: currentDiseases.join(',')
+        }));
       }
     } catch (err) {
       console.error('Error fetching analysis data:', err);
@@ -247,7 +255,7 @@ function SearchResultsContent() {
     
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}&category=${encodeURIComponent(selectedCategory)}`);
+        const res = await apiFetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}&category=${encodeURIComponent(selectedCategory)}`);
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data.suggestions);
@@ -270,6 +278,53 @@ function SearchResultsContent() {
     setSelectedCountries(parsedCountries);
     const parsedDiseases = getDiseasesFromParams();
     setSelectedDiseases(parsedDiseases);
+
+    // Stale-While-Revalidate search cache restore
+    let cacheRestored = false;
+    const countriesStr = parsedCountries.join(',');
+    const diseasesStr = parsedDiseases.join(',');
+
+    try {
+      const cachedResultStr = sessionStorage.getItem('cachedSearchResults');
+      if (cachedResultStr) {
+        const cached = JSON.parse(cachedResultStr);
+        if (
+          cached.queryParam === queryParam &&
+          cached.fieldParam === fieldParam &&
+          cached.datasetParam === datasetParam &&
+          cached.countries === countriesStr &&
+          cached.diseases === diseasesStr
+        ) {
+          setMedicines(cached.medicines);
+          setMeta(cached.meta);
+          setPage(cached.page);
+          setLoading(false);
+          cacheRestored = true;
+        }
+      }
+      
+      const cachedAnalysisStr = sessionStorage.getItem('cachedSearchAnalysis');
+      if (cachedAnalysisStr) {
+        const cachedAnalysis = JSON.parse(cachedAnalysisStr);
+        if (
+          cachedAnalysis.queryParam === queryParam &&
+          cachedAnalysis.fieldParam === fieldParam &&
+          cachedAnalysis.countries === countriesStr &&
+          cachedAnalysis.diseases === diseasesStr
+        ) {
+          setAnalysisData(cachedAnalysis.analysisData);
+          setAnalysisLoading(false);
+        }
+      }
+    } catch (e) {
+      console.error('Error restoring search page cache:', e);
+    }
+
+    if (!cacheRestored) {
+      setLoading(true);
+      setAnalysisLoading(true);
+    }
+
     fetchSearchResults(1);
     fetchAnalysisData();
   }, [queryParam, fieldParam, datasetParam, searchParams]);
@@ -290,23 +345,24 @@ function SearchResultsContent() {
         diseases: currentDiseases.join(','),
       });
 
-      const token = localStorage.getItem('accessToken');
-      const headers: any = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(`${apiBaseUrl}/medicine/search?${params.toString()}`, {
-        headers,
-        //@ts-ignore
-        credentials: 'include',
-      });
+      const res = await apiFetch(`${apiBaseUrl}/medicine/search?${params.toString()}`);
 
       if (res.ok) {
         const data = await res.json();
         setMedicines(data.medicines);
         setMeta(data.meta);
         setPage(pageNum);
+        // Update cache
+        sessionStorage.setItem('cachedSearchResults', JSON.stringify({
+          medicines: data.medicines,
+          meta: data.meta,
+          page: pageNum,
+          queryParam,
+          fieldParam,
+          datasetParam,
+          countries: currentCountries.join(','),
+          diseases: currentDiseases.join(',')
+        }));
       } else {
         showToast('Error querying clinical records', 'danger');
       }
@@ -1047,8 +1103,9 @@ function SearchResultsContent() {
             </div>
 
             {analysisLoading ? (
-              <div className="card" style={{ padding: '60px', textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ fontSize: '15px', color: 'var(--text-light)' }}>Loading visual analysis chart metrics...</div>
+              <div className="card" style={{ padding: '50px 20px', textAlign: 'center', marginBottom: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="spinner-loader-dark"></div>
+                <div style={{ fontSize: '15px', color: 'var(--text-light)', fontWeight: 600 }}>Loading visual analysis chart metrics...</div>
               </div>
             ) : analysisData ? (
               <>
@@ -1855,7 +1912,8 @@ function SearchResultsContent() {
           </div>
 
           {loading ? (
-            <div className="card" style={{ padding: '60px 0', textAlign: 'center' }}>
+            <div className="card" style={{ padding: '60px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="spinner-loader-dark"></div>
               <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>
                 Loading database rows...
               </div>

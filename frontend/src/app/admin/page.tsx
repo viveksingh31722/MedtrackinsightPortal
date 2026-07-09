@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
-  const { user, apiBaseUrl, showToast, loading } = useApp();
+  const { user, apiBaseUrl, showToast, loading, apiFetch } = useApp();
   const [file, setFile] = useState<File | null>(null);
   const [importMode, setImportMode] = useState<'append' | 'clear' | 'upsert'>('append');
   const [uploading, setUploading] = useState(false);
@@ -24,14 +24,7 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/admin/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        //@ts-ignore
-        credentials: 'include'
-      });
+      const res = await apiFetch(`${apiBaseUrl}/admin/stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -44,7 +37,7 @@ export default function AdminPage() {
   const fetchMedicines = async () => {
     try {
       // Fetch up to 100 records for simple admin grid listing
-      const res = await fetch(`${apiBaseUrl}/medicine/search?limit=100`);
+      const res = await apiFetch(`${apiBaseUrl}/medicine/search?limit=100`);
       if (res.ok) {
         const data = await res.json();
         setMedicines(data.medicines);
@@ -83,15 +76,9 @@ export default function AdminPage() {
       formData.append('file', file);
       formData.append('mode', importMode);
 
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/admin/upload`, {
+      const res = await apiFetch(`${apiBaseUrl}/admin/upload`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData,
-        //@ts-ignore
-        credentials: 'include'
       });
 
       const data = await res.json();
@@ -121,14 +108,8 @@ export default function AdminPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/admin/medicine/${id}`, {
+      const res = await apiFetch(`${apiBaseUrl}/admin/medicine/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        //@ts-ignore
-        credentials: 'include'
       });
 
       if (res.ok) {
@@ -150,14 +131,8 @@ export default function AdminPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/admin/clear`, {
+      const res = await apiFetch(`${apiBaseUrl}/admin/clear`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        //@ts-ignore
-        credentials: 'include'
       });
 
       if (res.ok) {

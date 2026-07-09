@@ -19,11 +19,18 @@ type TabType =
 function ProfileDashboard() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, apiBaseUrl, showToast, checkSession, logoutUser } = useApp();
+  const { user, apiBaseUrl, showToast, checkSession, logoutUser, apiFetch } = useApp();
 
   const tabParam = searchParams.get('tab') as TabType;
-  const initialTab = tabParam || 'personal-info';
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      const urlTab = new URLSearchParams(window.location.search).get('tab') as TabType;
+      if (urlTab) return urlTab;
+      const cachedTab = sessionStorage.getItem('activeProfileTab') as TabType;
+      if (cachedTab) return cachedTab;
+    }
+    return 'personal-info';
+  });
 
   // Form states for Personal Info
   const [name, setName] = useState(user?.name || '');
@@ -68,10 +75,14 @@ function ProfileDashboard() {
     }
   }, [user]);
 
-  // Handle tab updates in URL
+  // Handle tab updates in URL instantly using client-side History API (shallow update)
+  // to avoid next.js router recompilation and React Suspense loading fallback overlay.
   const changeTab = (tab: TabType) => {
     setActiveTab(tab);
-    router.replace(`/profile?tab=${tab}`);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `/profile?tab=${tab}`);
+      sessionStorage.setItem('activeProfileTab', tab);
+    }
   };
 
   // Redirect if not logged in
@@ -93,16 +104,9 @@ function ProfileDashboard() {
     e.preventDefault();
     try {
       setUpdatingProfile(true);
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/auth/profile`, {
+      const res = await apiFetch(`${apiBaseUrl}/auth/profile`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ name, phone, company, designation, country, department }),
-        //@ts-ignore
-        credentials: 'include',
       });
 
       const data = await res.json();
@@ -122,13 +126,8 @@ function ProfileDashboard() {
   const handleUpdatePrefs = async () => {
     try {
       setUpdatingPrefs(true);
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiBaseUrl}/auth/preferences`, {
+      const res = await apiFetch(`${apiBaseUrl}/auth/preferences`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           prefNewTrials,
           prefAlerts,
@@ -139,8 +138,6 @@ function ProfileDashboard() {
           prefDefaultCountry,
           prefDefaultTherapeuticArea
         }),
-        //@ts-ignore
-        credentials: 'include',
       });
 
       const data = await res.json();

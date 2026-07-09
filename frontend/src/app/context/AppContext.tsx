@@ -37,6 +37,7 @@ interface AppContextType {
   logoutUser: () => Promise<void>;
   checkSession: () => Promise<void>;
   apiBaseUrl: string;
+  apiFetch: (endpoint: string, options?: RequestInit) => Promise<Response>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -50,8 +51,90 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   // Express API Base Endpoint URL
   const apiBaseUrl = 'http://localhost:5000/api';
 
-  // Session verification on mount
+  // Helper to sync theme to cookie (helps prevent visual flashes on SSR layouts)
+  const syncThemeCookie = (theme: string) => {
+    if (typeof window !== 'undefined') {
+      document.cookie = `prefTheme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+  };
+
+  // Custom Fetch Wrapper: Automatically appends JWT, intercepts expired token (401/403),
+  // silently refreshes token via /api/auth/refresh, and retries the original request.
+  const apiFetch = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    
+    const headers = new Headers(options.headers || {});
+    if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+      headers.set('Content-Type', 'application/json');
+    }
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    const fetchOptions: RequestInit = {
+      ...options,
+      headers,
+      credentials: 'include', // Needed to send refresh cookies
+    };
+
+    let res = await fetch(endpoint, fetchOptions);
+
+    // Auto-refresh logic on token expiry (401/403)
+    if (
+      (res.status === 401 || res.status === 403) && 
+      !endpoint.endsWith('/auth/refresh') && 
+      !endpoint.endsWith('/auth/login')
+    ) {
+      try {
+        const refreshRes = await fetch(`${apiBaseUrl}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          const newAccessToken = refreshData.accessToken;
+          localStorage.setItem('accessToken', newAccessToken);
+
+          // Update headers and retry the original request
+          headers.set('Authorization', `Bearer ${newAccessToken}`);
+          res = await fetch(endpoint, {
+            ...options,
+            headers,
+            credentials: 'include',
+          });
+        } else {
+          // Refresh token expired or invalid: teardown session
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('cachedUser');
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Failed to auto-refresh access token:', err);
+      }
+    }
+
+    return res;
+  };
+
+  // Load cached user session on mount (Stale-While-Revalidate)
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('cachedUser');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setUser(parsed);
+          setLoading(false); // UI renders instantly
+          if (parsed.prefTheme) {
+            syncThemeCookie(parsed.prefTheme);
+          }
+        } catch (e) {
+          console.error('Error parsing cached user:', e);
+        }
+      }
+    }
     checkSession();
   }, []);
 
@@ -64,31 +147,28 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkSession = async () => {
     try {
-      setLoading(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // If we don't have a cached user, show loading state
+      if (!localStorage.getItem('cachedUser')) {
+        setLoading(true);
       }
-
-      const res = await fetch(`${apiBaseUrl}/auth/me`, {
-        headers,
-        // Force sending cookies
-        //@ts-ignore
-        credentials: 'include',
-      });
+      
+      const res = await apiFetch(`${apiBaseUrl}/auth/me`);
 
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        localStorage.setItem('cachedUser', JSON.stringify(data.user));
+        if (data.user?.prefTheme) {
+          syncThemeCookie(data.user.prefTheme);
+        }
+        
         if (data.user?.passwordExpired && typeof window !== 'undefined' && window.location.pathname !== '/change-password') {
           showToast('Your password has expired. Please update it.', 'warning');
           router.push('/change-password');
         }
       } else {
         setUser(null);
+        localStorage.removeItem('cachedUser');
       }
     } catch (err) {
       console.error('Session validation error:', err);
@@ -99,9 +179,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const loginUser = (email: string, accessToken: string, userDetails: any) => {
-    // Save token in local storage as a fallback, though cookies are main
     localStorage.setItem('accessToken', accessToken);
-    setUser({
+    
+    const sessionData = {
       id: userDetails.id,
       email: userDetails.email,
       isSubscribed: userDetails.isSubscribed,
@@ -124,7 +204,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       prefDefaultCountry: userDetails.prefDefaultCountry,
       prefDefaultTherapeuticArea: userDetails.prefDefaultTherapeuticArea,
       createdAt: userDetails.createdAt,
-    });
+    };
+
+    setUser(sessionData);
+    localStorage.setItem('cachedUser', JSON.stringify(sessionData));
+    
+    if (userDetails.prefTheme) {
+      syncThemeCookie(userDetails.prefTheme);
+    }
+
     showToast(`Welcome back, ${email}!`, 'success');
 
     if (userDetails.passwordExpired) {
@@ -137,12 +225,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logoutUser = async () => {
     try {
-      await fetch(`${apiBaseUrl}/auth/logout`, {
+      await apiFetch(`${apiBaseUrl}/auth/logout`, {
         method: 'POST',
-        //@ts-ignore
-        credentials: 'include',
       });
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('cachedUser');
       setUser(null);
       showToast('Logged out successfully', 'info');
       router.push('/login');
@@ -163,6 +250,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         logoutUser,
         checkSession,
         apiBaseUrl,
+        apiFetch,
       }}
     >
       {children}

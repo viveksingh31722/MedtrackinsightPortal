@@ -422,6 +422,7 @@ export const postContactMessage = async (req: Request, res: Response) => {
 
 export const getStats = async (req: Request, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=60'); // 1 minute cache for database metrics
     const totalPipeline = await prisma.pipelineProspector.count();
     const totalForecasting = await prisma.patentSalesForecasting.count();
     const totalUsers = await prisma.user.count();

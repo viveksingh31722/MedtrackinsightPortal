@@ -79,14 +79,25 @@ export default function HomePage() {
   // Suggestions UI states
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searching, setSearching] = useState(false);
 
-  // Database stats state
-  const [stats, setStats] = useState({
-    totalMedicines: 10,
-    totalPipeline: 0,
-    totalForecasting: 0,
-    totalUsers: 3,
-    totalDemos: 0,
+  // Database stats state with local cache initialization
+  const [stats, setStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('cachedStats');
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (e) {}
+      }
+    }
+    return {
+      totalMedicines: 10,
+      totalPipeline: 0,
+      totalForecasting: 0,
+      totalUsers: 3,
+      totalDemos: 0,
+    };
   });
 
   const { apiBaseUrl, user } = useApp();
@@ -121,6 +132,7 @@ export default function HomePage() {
       .then((data) => {
         if (data.totalMedicines !== undefined) {
           setStats(data);
+          localStorage.setItem('cachedStats', JSON.stringify(data));
         }
       })
       .catch((err) => console.log('Error loading stats:', err));
@@ -128,6 +140,7 @@ export default function HomePage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearching(true);
     const params = new URLSearchParams();
     if (query.trim() !== '') params.append('query', query.trim());
     if (field !== 'all') params.append('field', field);
@@ -311,8 +324,17 @@ export default function HomePage() {
                   className="btn btn-primary"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
+                  disabled={searching}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                 >
-                  Search Database
+                  {searching ? (
+                    <>
+                      <div className="spinner-loader"></div>
+                      <span>Searching...</span>
+                    </>
+                  ) : (
+                    "Search Database"
+                  )}
                 </motion.button>
               </div>
             </form>

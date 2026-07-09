@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { useRouter } from 'next/navigation';
 
 export default function SubscriptionPage() {
-  const { user, apiBaseUrl, showToast, checkSession } = useApp();
+  const { user, apiBaseUrl, showToast, checkSession, apiFetch } = useApp();
   const [loading, setLoading] = useState(false);
   const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [activeOrder, setActiveOrder] = useState<any | null>(null);
@@ -32,18 +32,10 @@ export default function SubscriptionPage() {
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('accessToken');
-      
       // 1. Create order on Express backend
-      const res = await fetch(`${apiBaseUrl}/payment/order`, {
+      const res = await apiFetch(`${apiBaseUrl}/payment/order`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ planType }),
-        //@ts-ignore
-        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -84,20 +76,14 @@ export default function SubscriptionPage() {
         handler: async (response: any) => {
           try {
             setLoading(true);
-            const verifyRes = await fetch(`${apiBaseUrl}/payment/verify`, {
+            const verifyRes = await apiFetch(`${apiBaseUrl}/payment/verify`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 isSandbox: false,
               }),
-              //@ts-ignore
-              credentials: 'include',
             });
 
             if (verifyRes.ok) {
@@ -136,22 +122,15 @@ export default function SubscriptionPage() {
     try {
       setLoading(true);
       setShowSimulateModal(false);
-      const token = localStorage.getItem('accessToken');
 
-      const verifyRes = await fetch(`${apiBaseUrl}/payment/verify`, {
+      const verifyRes = await apiFetch(`${apiBaseUrl}/payment/verify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({
           razorpay_order_id: activeOrder.id,
           razorpay_payment_id: 'pay_sim_' + Math.random().toString(36).substring(7),
           razorpay_signature: 'sig_sim_ok',
           isSandbox: true,
         }),
-        //@ts-ignore
-        credentials: 'include',
       });
 
       if (verifyRes.ok) {

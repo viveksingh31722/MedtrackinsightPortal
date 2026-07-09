@@ -7,6 +7,8 @@ import { medicineRoutes } from './routes/medicine.routes';
 import { paymentRoutes } from './routes/payment.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { generalLimiter, authLimiter } from './middleware/rateLimiter';
+import { createOrder, verifyPayment } from './controllers/payment.controller';
+import { authenticateJWT } from './middleware/auth.middleware';
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/medicine', medicineRoutes);
 app.use('/api/payment', paymentRoutes);
+app.post('/api/create-order', authenticateJWT, createOrder);
+app.post('/api/verify-payment', authenticateJWT, verifyPayment);
 app.use('/api/admin', adminRoutes);
 
 // Catch-all 404 routing handler

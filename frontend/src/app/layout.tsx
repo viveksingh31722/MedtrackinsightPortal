@@ -408,6 +408,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const match = document.cookie.match(/(?:^|; )prefTheme=([^;]*)/);
+      const theme = match ? match[1] : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+  }, []);
+
   return (
     <html lang="en">
       <head>
