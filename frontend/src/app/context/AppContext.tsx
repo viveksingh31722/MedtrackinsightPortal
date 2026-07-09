@@ -9,6 +9,23 @@ export interface UserSession {
   isSubscribed: boolean;
   downloadCount: number;
   subscriptionEnd?: string;
+  isAdmin?: boolean;
+  passwordExpired?: boolean;
+  name?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  designation?: string | null;
+  country?: string | null;
+  department?: string | null;
+  prefNewTrials?: boolean;
+  prefAlerts?: boolean;
+  prefDeals?: boolean;
+  prefNewsletter?: boolean;
+  prefMarketing?: boolean;
+  prefTheme?: string;
+  prefDefaultCountry?: string;
+  prefDefaultTherapeuticArea?: string;
+  createdAt?: string;
 }
 
 interface AppContextType {
@@ -66,6 +83,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        if (data.user?.passwordExpired && typeof window !== 'undefined' && window.location.pathname !== '/change-password') {
+          showToast('Your password has expired. Please update it.', 'warning');
+          router.push('/change-password');
+        }
       } else {
         setUser(null);
       }
@@ -86,8 +107,32 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       isSubscribed: userDetails.isSubscribed,
       downloadCount: userDetails.downloadCount || 0,
       subscriptionEnd: userDetails.subscriptionEnd,
+      isAdmin: userDetails.isAdmin || false,
+      passwordExpired: userDetails.passwordExpired || false,
+      name: userDetails.name,
+      phone: userDetails.phone,
+      company: userDetails.company,
+      designation: userDetails.designation,
+      country: userDetails.country,
+      department: userDetails.department,
+      prefNewTrials: userDetails.prefNewTrials,
+      prefAlerts: userDetails.prefAlerts,
+      prefDeals: userDetails.prefDeals,
+      prefNewsletter: userDetails.prefNewsletter,
+      prefMarketing: userDetails.prefMarketing,
+      prefTheme: userDetails.prefTheme,
+      prefDefaultCountry: userDetails.prefDefaultCountry,
+      prefDefaultTherapeuticArea: userDetails.prefDefaultTherapeuticArea,
+      createdAt: userDetails.createdAt,
     });
     showToast(`Welcome back, ${email}!`, 'success');
+
+    if (userDetails.passwordExpired) {
+      setTimeout(() => {
+        showToast('Your password has expired. Please update it immediately.', 'warning');
+        router.push('/change-password');
+      }, 500);
+    }
   };
 
   const logoutUser = async () => {

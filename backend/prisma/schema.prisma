@@ -20,8 +20,29 @@ model User {
   downloadCount   Int       @default(0)
   refreshToken    String?
   emailVerified   Boolean   @default(false)
+  passwordChangedAt DateTime  @default(now())
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  // Profile Fields
+  name            String?
+  phone           String?
+  company         String?
+  designation     String?
+  country         String?
+  department      String?
+
+  // Notification Preferences
+  prefNewTrials   Boolean   @default(true)
+  prefAlerts      Boolean   @default(true)
+  prefDeals       Boolean   @default(true)
+  prefNewsletter  Boolean   @default(true)
+  prefMarketing   Boolean   @default(false)
+
+  // General Preferences
+  prefTheme       String    @default("dark")
+  prefDefaultCountry String @default("India")
+  prefDefaultTherapeuticArea String @default("Oncology")
 }
 
 model PipelineProspector {

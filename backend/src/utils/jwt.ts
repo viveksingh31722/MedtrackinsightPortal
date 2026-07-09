@@ -5,6 +5,7 @@ export interface TokenPayload {
   userId: string;
   email: string;
   isSubscribed: boolean;
+  isAdmin?: boolean;
 }
 
 /**

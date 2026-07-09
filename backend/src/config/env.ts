@@ -31,6 +31,7 @@ export const env = {
   RAZORPAY_KEY_SECRET: getRequiredEnv('RAZORPAY_KEY_SECRET', 'dev_razorpay_key_secret_for_local_only'),
   ELASTICSEARCH_NODE: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200',
   ELASTICSEARCH_INDEX: process.env.ELASTICSEARCH_INDEX || 'medicines',
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@medtrack.com',
 };
 
 // Quick startup verification to make sure required configurations exist

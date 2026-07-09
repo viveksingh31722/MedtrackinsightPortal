@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { prisma } from '../config/prisma';
+import { env } from '../config/env';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -114,10 +115,14 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Generate credentials
+    const isAdmin = user.email === env.ADMIN_EMAIL;
+    const passwordExpired = Date.now() - new Date(user.passwordChangedAt).getTime() > 90 * 24 * 60 * 60 * 1000;
+
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
       isSubscribed: user.isSubscribed,
+      isAdmin,
     };
 
     const accessToken = generateAccessToken(payload);
@@ -139,6 +144,23 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         isSubscribed: user.isSubscribed,
+        isAdmin,
+        passwordExpired,
+        name: user.name,
+        phone: user.phone,
+        company: user.company,
+        designation: user.designation,
+        country: user.country,
+        department: user.department,
+        prefNewTrials: user.prefNewTrials,
+        prefAlerts: user.prefAlerts,
+        prefDeals: user.prefDeals,
+        prefNewsletter: user.prefNewsletter,
+        prefMarketing: user.prefMarketing,
+        prefTheme: user.prefTheme,
+        prefDefaultCountry: user.prefDefaultCountry,
+        prefDefaultTherapeuticArea: user.prefDefaultTherapeuticArea,
+        createdAt: user.createdAt,
       },
       accessToken,
     });
@@ -234,6 +256,9 @@ export const getMe = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const isAdmin = user.email === env.ADMIN_EMAIL;
+    const passwordExpired = Date.now() - new Date(user.passwordChangedAt).getTime() > 90 * 24 * 60 * 60 * 1000;
+
     return res.status(200).json({
       user: {
         id: user.id,
@@ -241,6 +266,23 @@ export const getMe = async (req: Request, res: Response) => {
         isSubscribed: user.isSubscribed,
         downloadCount: user.downloadCount,
         subscriptionEnd: user.subscriptionEnd,
+        isAdmin,
+        passwordExpired,
+        name: user.name,
+        phone: user.phone,
+        company: user.company,
+        designation: user.designation,
+        country: user.country,
+        department: user.department,
+        prefNewTrials: user.prefNewTrials,
+        prefAlerts: user.prefAlerts,
+        prefDeals: user.prefDeals,
+        prefNewsletter: user.prefNewsletter,
+        prefMarketing: user.prefMarketing,
+        prefTheme: user.prefTheme,
+        prefDefaultCountry: user.prefDefaultCountry,
+        prefDefaultTherapeuticArea: user.prefDefaultTherapeuticArea,
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {
@@ -306,10 +348,12 @@ export const verifySignup = async (req: Request, res: Response) => {
       where: { email },
     });
 
+    const isAdmin = user.email === env.ADMIN_EMAIL;
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
       isSubscribed: user.isSubscribed,
+      isAdmin,
     };
 
     const accessToken = generateAccessToken(payload);
@@ -329,6 +373,22 @@ export const verifySignup = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         isSubscribed: user.isSubscribed,
+        isAdmin,
+        name: user.name,
+        phone: user.phone,
+        company: user.company,
+        designation: user.designation,
+        country: user.country,
+        department: user.department,
+        prefNewTrials: user.prefNewTrials,
+        prefAlerts: user.prefAlerts,
+        prefDeals: user.prefDeals,
+        prefNewsletter: user.prefNewsletter,
+        prefMarketing: user.prefMarketing,
+        prefTheme: user.prefTheme,
+        prefDefaultCountry: user.prefDefaultCountry,
+        prefDefaultTherapeuticArea: user.prefDefaultTherapeuticArea,
+        createdAt: user.createdAt,
       },
       accessToken,
     });
@@ -472,6 +532,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       where: { email },
       data: {
         password: hashedPassword,
+        passwordChangedAt: new Date(),
       },
     });
 
@@ -485,5 +546,178 @@ export const resetPassword = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Reset password error:', error);
     return res.status(500).json({ message: 'Internal server error during password reset' });
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    if (!authReq.user || !authReq.user.userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: 'Old password and new password are required' });
+    }
+
+    // Retrieve user from DB
+    const user = await prisma.user.findUnique({
+      where: { id: authReq.user.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password matches oldPassword
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'The current password you entered is incorrect' });
+    }
+
+    // Validate new password strength
+    if (!isPasswordStrong(newPassword)) {
+      return res.status(400).json({
+        message: 'Password must be 10-14 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.'
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+      },
+    });
+
+    return res.status(200).json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    return res.status(500).json({ message: 'Internal server error during password update' });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    if (!authReq.user || !authReq.user.userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { name, phone, company, designation, country, department } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: authReq.user.userId },
+      data: {
+        name: name !== undefined ? name : null,
+        phone: phone !== undefined ? phone : null,
+        company: company !== undefined ? company : null,
+        designation: designation !== undefined ? designation : null,
+        country: country !== undefined ? country : null,
+        department: department !== undefined ? department : null,
+      },
+    });
+
+    return res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        isSubscribed: updatedUser.isSubscribed,
+        downloadCount: updatedUser.downloadCount,
+        subscriptionEnd: updatedUser.subscriptionEnd,
+        isAdmin: updatedUser.email === env.ADMIN_EMAIL,
+        passwordExpired: Date.now() - new Date(updatedUser.passwordChangedAt).getTime() > 90 * 24 * 60 * 60 * 1000,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        company: updatedUser.company,
+        designation: updatedUser.designation,
+        country: updatedUser.country,
+        department: updatedUser.department,
+        prefNewTrials: updatedUser.prefNewTrials,
+        prefAlerts: updatedUser.prefAlerts,
+        prefDeals: updatedUser.prefDeals,
+        prefNewsletter: updatedUser.prefNewsletter,
+        prefMarketing: updatedUser.prefMarketing,
+        prefTheme: updatedUser.prefTheme,
+        prefDefaultCountry: updatedUser.prefDefaultCountry,
+        prefDefaultTherapeuticArea: updatedUser.prefDefaultTherapeuticArea,
+        createdAt: updatedUser.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({ message: 'Internal server error during profile update' });
+  }
+};
+
+export const updatePreferences = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    if (!authReq.user || !authReq.user.userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const {
+      prefNewTrials,
+      prefAlerts,
+      prefDeals,
+      prefNewsletter,
+      prefMarketing,
+      prefTheme,
+      prefDefaultCountry,
+      prefDefaultTherapeuticArea,
+    } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: authReq.user.userId },
+      data: {
+        prefNewTrials: prefNewTrials !== undefined ? !!prefNewTrials : undefined,
+        prefAlerts: prefAlerts !== undefined ? !!prefAlerts : undefined,
+        prefDeals: prefDeals !== undefined ? !!prefDeals : undefined,
+        prefNewsletter: prefNewsletter !== undefined ? !!prefNewsletter : undefined,
+        prefMarketing: prefMarketing !== undefined ? !!prefMarketing : undefined,
+        prefTheme: prefTheme !== undefined ? String(prefTheme) : undefined,
+        prefDefaultCountry: prefDefaultCountry !== undefined ? String(prefDefaultCountry) : undefined,
+        prefDefaultTherapeuticArea: prefDefaultTherapeuticArea !== undefined ? String(prefDefaultTherapeuticArea) : undefined,
+      },
+    });
+
+    return res.status(200).json({
+      message: 'Preferences updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        isSubscribed: updatedUser.isSubscribed,
+        downloadCount: updatedUser.downloadCount,
+        subscriptionEnd: updatedUser.subscriptionEnd,
+        isAdmin: updatedUser.email === env.ADMIN_EMAIL,
+        passwordExpired: Date.now() - new Date(updatedUser.passwordChangedAt).getTime() > 90 * 24 * 60 * 60 * 1000,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        company: updatedUser.company,
+        designation: updatedUser.designation,
+        country: updatedUser.country,
+        department: updatedUser.department,
+        prefNewTrials: updatedUser.prefNewTrials,
+        prefAlerts: updatedUser.prefAlerts,
+        prefDeals: updatedUser.prefDeals,
+        prefNewsletter: updatedUser.prefNewsletter,
+        prefMarketing: updatedUser.prefMarketing,
+        prefTheme: updatedUser.prefTheme,
+        prefDefaultCountry: updatedUser.prefDefaultCountry,
+        prefDefaultTherapeuticArea: updatedUser.prefDefaultTherapeuticArea,
+        createdAt: updatedUser.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    return res.status(500).json({ message: 'Internal server error during preferences update' });
   }
 };

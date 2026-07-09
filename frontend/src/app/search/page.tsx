@@ -72,7 +72,7 @@ function SearchResultsContent() {
     if (clivalCountries.length > 0) {
       return clivalCountries;
     }
-    return ALL_COUNTRIES;
+    return [];
   };
 
   const getDiseasesFromParams = () => {
@@ -80,7 +80,7 @@ function SearchResultsContent() {
     if (diseasesStr !== null) {
       return diseasesStr.split(',').map(d => d.trim()).filter(Boolean);
     }
-    return ALL_DISEASES;
+    return [];
   };
 
   const countriesParam = getCountriesFromParams();

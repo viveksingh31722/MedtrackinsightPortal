@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../context/AppContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const isPasswordValid = (pw: string): boolean => {
   if (pw.length < 10 || pw.length > 14) return false;
@@ -27,6 +28,7 @@ function AuthForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
 
   // OTP Signup verification overlay state
   const [showSignupOtp, setShowSignupOtp] = useState(false);
@@ -64,7 +66,7 @@ function AuthForm() {
     setActiveTab(initialTab);
     setForgotPassStep(0);
     setShowSignupOtp(false);
-    
+
     if (initialTab === 'admin') {
       setEmail('admin@medtrack.com');
     } else {
@@ -111,7 +113,7 @@ function AuthForm() {
     try {
       setLoading(true);
       const url = activeTab === 'signup' ? `${apiBaseUrl}/auth/register` : `${apiBaseUrl}/auth/login`;
-      
+
       const res = await fetch(url, {
         method: 'POST',
         headers: {
@@ -345,33 +347,63 @@ function AuthForm() {
   };
 
   return (
-    <div className="auth-split-layout">
-      {/* Left branding panel */}
-      <div className="auth-sidebar-hero">
-        <div style={{ zIndex: 2 }}>
-          <span className="hero-subtitle" style={{ color: '#000000', opacity: 0.95 }}>MedTrackInsight R&amp;D</span>
-          <h2 className="auth-sidebar-title" style={{ marginTop: '16px' }}>Clinical Trial &amp; Drug Intelligence</h2>
-          <p className="auth-sidebar-text">
-            Search molecular candidates, track clinical developments, analyze formulation parameters, and monitor global patent filings with a streamlined off-white visual workspace.
-          </p>
+    <div className="auth-split-layout" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', minHeight: 'calc(100vh - 80px)', background: '#C3B6A7' }}>
+      {/* Left branding panel with centered smaller video card */}
+      <div className="auth-sidebar-hero" style={{ backgroundColor: 'transparent', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 60px', borderRight: 'none', order: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', width: '100%' }}>
+
+          {/* Animated M Network Video or Fallback Image styled directly as a card */}
+          {!videoFailed ? (
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              poster="/m_network.png"
+              style={{
+                width: '800px', // Wider format to give more horizontal space
+                height: '500px', // Matches the height of the login card exactly
+                borderRadius: '24px',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                boxShadow: 'var(--shadow-md)',
+                mixBlendMode: 'multiply',
+                filter: 'brightness(1.06) contrast(1.03)',
+                objectFit: 'cover',
+                /* Custom floating animation directly on the media card */
+                animation: 'floatAnimation 6s ease-in-out infinite',
+              }}
+            >
+              <source
+                src="/m_network_antigravity.mp4"
+                type="video/mp4"
+                onError={() => setVideoFailed(true)}
+              />
+            </video>
+          ) : (
+            <img
+              src="/m_network.png"
+              alt="Clinical Trial &amp; Drug Intelligence Network"
+              style={{
+                width: '800px', // Wider format to give more horizontal space
+                height: '500px', // Matches the height of the login card exactly
+                borderRadius: '24px',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                boxShadow: 'var(--shadow-md)',
+                mixBlendMode: 'multiply',
+                filter: 'brightness(1.06) contrast(1.03)',
+                objectFit: 'cover',
+                animation: 'floatAnimation 6s ease-in-out infinite',
+              }}
+            />
+          )}
+
         </div>
-        <div style={{
-          position: 'absolute',
-          bottom: '-50px',
-          left: '-50px',
-          width: '240px',
-          height: '240px',
-          borderRadius: '9999px',
-          background: 'rgba(0,0,0,0.03)',
-          zIndex: 1,
-          border: '1.5px solid var(--border)'
-        }}></div>
       </div>
 
-      {/* Right Login form console */}
-      <div className="auth-form-container">
+      {/* Right Login form console (placed second in JSX, visually ordered on the right) */}
+      <div className="auth-form-container" style={{ backgroundColor: 'transparent', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px', order: 2 }}>
         <div className="auth-box">
-          
+
           {/* 1. Signup verification overlay view */}
           {showSignupOtp ? (
             <div>
@@ -589,96 +621,103 @@ function AuthForm() {
                 </button>
               </div>
 
-              {activeTab === 'admin' && (
-                <div className="alert alert-warning" style={{ fontSize: '13px', padding: '10px 14px', marginBottom: '20px' }}>
-                  ⚠️ Securing channel. Database actions are audited.
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+                >
+                  <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div className="form-group">
-                  <label htmlFor="auth-email" className="form-label">Email Address</label>
-                  <input
-                    id="auth-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="researcher@biotech.com"
-                    className="form-input"
-                    required
-                  />
-                </div>
+                    {/* Consistent height input fields container to keep form height steady */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '260px', justifyContent: 'flex-start' }}>
 
-                <div className="form-group">
-                  <label htmlFor="auth-password" className="form-label">Password</label>
-                  <input
-                    id="auth-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="form-input"
-                    required
-                  />
-                  {activeTab === 'signup' && password && !isPasswordValid(password) && (
-                    <div style={{ fontSize: '12px', color: '#ff4d4d', marginTop: '6px', lineHeight: '1.4', fontWeight: 600 }}>
-                      ⚠️ Password must be 10-14 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character.
+                      {activeTab === 'admin' && (
+                        <div className="alert alert-warning" style={{ fontSize: '13px', padding: '10px 14px', marginBottom: '0px' }}>
+                          ⚠️ Securing channel. Database actions are audited.
+                        </div>
+                      )}
+
+                      <div className="form-group">
+                        <label htmlFor="auth-email" className="form-label" style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-main)' }}>Email Address</label>
+                        <input
+                          id="auth-email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="researcher@biotech.com"
+                          className="form-input"
+                          required
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="auth-password" className="form-label" style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-main)' }}>Password</label>
+                        <input
+                          id="auth-password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="form-input"
+                          required
+                        />
+                        {activeTab === 'signup' && password && !isPasswordValid(password) && (
+                          <div style={{ fontSize: '12px', color: '#ff4d4d', marginTop: '6px', lineHeight: '1.4', fontWeight: 600 }}>
+                            ⚠️ Password must be 10-14 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character.
+                          </div>
+                        )}
+                      </div>
+
+                      {activeTab === 'login' && (
+                        <div style={{ textAlign: 'right', marginTop: '-8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForgotPassStep(1);
+                              setEmail('');
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-muted)',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textDecoration: 'underline',
+                            }}
+                          >
+                            Forgot Password?
+                          </button>
+                        </div>
+                      )}
+
+                      {activeTab === 'signup' && (
+                        <div className="form-group">
+                          <label htmlFor="auth-confirm" className="form-label" style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-main)' }}>Confirm Password</label>
+                          <input
+                            id="auth-confirm"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="form-input"
+                            required
+                          />
+                        </div>
+                      )}
+
                     </div>
-                  )}
-                </div>
 
-                {activeTab === 'login' && (
-                  <div style={{ textAlign: 'right', marginTop: '-8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setForgotPassStep(1);
-                        setEmail('');
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-muted)',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Forgot Password?
+                    <button type="submit" disabled={loading} className="btn btn-primary" style={{ height: '48px', marginTop: '8px' }}>
+                      {loading ? 'Processing...' : activeTab === 'signup' ? 'Create Account' : 'Authenticate Access'}
                     </button>
-                  </div>
-                )}
-
-                {activeTab === 'signup' && (
-                  <div className="form-group">
-                    <label htmlFor="auth-confirm" className="form-label">Confirm Password</label>
-                    <input
-                      id="auth-confirm"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="form-input"
-                      required
-                    />
-                  </div>
-                )}
-
-                <button type="submit" disabled={loading} className="btn btn-primary" style={{ height: '48px', marginTop: '8px' }}>
-                  {loading ? 'Processing...' : activeTab === 'signup' ? 'Create Account' : 'Authenticate Access'}
-                </button>
-              </form>
-
-              {/* Sandbox info panel */}
-              <div className="card" style={{ padding: '20px', fontSize: '13px', backgroundColor: 'var(--bg-main)', marginTop: '24px', borderRadius: '16px' }}>
-                <strong style={{ fontWeight: 800 }}>💡 Sandbox Accounts (Skip OTP):</strong>
-                <div style={{ marginTop: '8px', lineHeight: '1.6', fontWeight: 600, color: 'var(--text-muted)' }}>
-                  - Pro: <code style={{ color: '#000000' }}>pro@medtrack.com</code> / password123<br />
-                  - Guest: <code style={{ color: '#000000' }}>user@medtrack.com</code> / password123<br />
-                  - Admin: <code style={{ color: '#000000' }}>admin@medtrack.com</code> / admin123
-                </div>
-              </div>
+                  </form>
+                </motion.div>
+              </AnimatePresence>
             </div>
           )}
         </div>

@@ -9,6 +9,9 @@ import {
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  changePassword,
+  updateProfile,
+  updatePreferences,
 } from '../controllers/auth.controller';
 import { authenticateJWT } from '../middleware/auth.middleware';
 
@@ -24,8 +27,11 @@ router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOtp);
 router.post('/reset-password', resetPassword);
 
-// Authenticated user profile retrieval route
+// Authenticated user profile, preference, and password change routes
 router.get('/me', authenticateJWT, getMe);
+router.post('/change-password', authenticateJWT, changePassword);
+router.put('/profile', authenticateJWT, updateProfile);
+router.put('/preferences', authenticateJWT, updatePreferences);
 
 export default router;
 export { router as authRoutes };

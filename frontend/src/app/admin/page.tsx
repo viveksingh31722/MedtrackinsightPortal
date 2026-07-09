@@ -24,7 +24,14 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${apiBaseUrl}/admin/stats`);
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${apiBaseUrl}/admin/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        //@ts-ignore
+        credentials: 'include'
+      });
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -49,7 +56,7 @@ export default function AdminPage() {
 
   // Guard: Redirect non-admins
   useEffect(() => {
-    if (!loading && (!user || user.email !== 'admin@medtrack.com')) {
+    if (!loading && (!user || !user.isAdmin)) {
       showToast('Unauthorized access. Redirecting...', 'danger');
       router.push('/login');
     }
@@ -76,9 +83,15 @@ export default function AdminPage() {
       formData.append('file', file);
       formData.append('mode', importMode);
 
+      const token = localStorage.getItem('accessToken');
       const res = await fetch(`${apiBaseUrl}/admin/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
+        //@ts-ignore
+        credentials: 'include'
       });
 
       const data = await res.json();
@@ -108,8 +121,14 @@ export default function AdminPage() {
     }
 
     try {
+      const token = localStorage.getItem('accessToken');
       const res = await fetch(`${apiBaseUrl}/admin/medicine/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        //@ts-ignore
+        credentials: 'include'
       });
 
       if (res.ok) {
@@ -131,8 +150,14 @@ export default function AdminPage() {
     }
 
     try {
+      const token = localStorage.getItem('accessToken');
       const res = await fetch(`${apiBaseUrl}/admin/clear`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        //@ts-ignore
+        credentials: 'include'
       });
 
       if (res.ok) {
@@ -154,7 +179,7 @@ export default function AdminPage() {
     med.moa.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading || !user || user.email !== 'admin@medtrack.com') {
+  if (loading || !user || !user.isAdmin) {
     return (
       <div className="container" style={{ padding: '60px', textAlign: 'center' }}>
         <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>

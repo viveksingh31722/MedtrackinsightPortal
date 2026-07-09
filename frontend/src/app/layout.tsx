@@ -11,6 +11,7 @@ function NavigationHeader() {
   const { user, logoutUser, loading } = useApp();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === '/' && pathname !== '/') return false;
@@ -64,23 +65,188 @@ function NavigationHeader() {
           )}
         </nav>
 
-        <div className="nav-buttons">
+        <div className="nav-buttons" style={{ position: 'relative' }}>
           {loading ? (
             <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Loading...</span>
           ) : user ? (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
-                  {user.email}
-                </span>
-                <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '10px', padding: '1px 6px', marginTop: '2px' }}>
-                  {user.isSubscribed ? 'PRO Account' : 'Free Sandbox'}
-                </span>
-              </div>
-              <button onClick={logoutUser} className="btn btn-outline btn-sm">
-                Sign Out
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  transition: 'background 0.2s',
+                }}
+                className="profile-dropdown-trigger"
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {user.name || user.email.split('@')[0]}
+                  </span>
+                  <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '10px', padding: '1px 6px', marginTop: '2px' }}>
+                    {user.isSubscribed ? 'PRO Account' : 'Free Sandbox'}
+                  </span>
+                </div>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  color: '#ffffff',
+                  border: '1px solid var(--border)'
+                }}>
+                  {(user.name ? user.name.slice(0, 2).toUpperCase() : user.email.slice(0, 2).toUpperCase())}
+                </div>
               </button>
-            </>
+
+              <AnimatePresence>
+                {dropdownOpen && (
+                  <>
+                    <div 
+                      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 99 }} 
+                      onClick={() => setDropdownOpen(false)}
+                    />
+                     <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: '8px',
+                        width: '260px',
+                        backgroundColor: 'var(--bg-surface)',
+                        border: '1.5px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        boxShadow: 'var(--shadow-md)',
+                        zIndex: 100,
+                        overflow: 'hidden',
+                        padding: '8px 0',
+                      }}
+                    >
+                      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          color: '#ffffff',
+                          border: '1px solid var(--border)'
+                        }}>
+                          {(user.name ? user.name.slice(0, 2).toUpperCase() : user.email.slice(0, 2).toUpperCase())}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {user.name || 'User Profile'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {user.email}
+                          </span>
+                          <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '9px', padding: '1px 6px', marginTop: '4px', width: 'fit-content' }}>
+                            {user.isSubscribed ? '★ Pro Plan' : 'Free Plan'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ height: '1px', backgroundColor: 'var(--border)', margin: '4px 0' }} />
+
+                      <Link 
+                        href="/profile?tab=personal-info" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>👤</span> My Profile
+                      </Link>
+
+                      <Link 
+                        href="/profile?tab=saved-items" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>⭐</span> Saved Items
+                      </Link>
+
+                      <Link 
+                        href="/profile?tab=downloads" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>📥</span> Downloads
+                      </Link>
+
+                      <Link 
+                        href="/profile?tab=subscription" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>💳</span> Billing & Subscription
+                      </Link>
+
+                      <Link 
+                        href="/profile?tab=preferences" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>⚙️</span> Settings & Preferences
+                      </Link>
+
+                      <Link 
+                        href="/contact" 
+                        onClick={() => setDropdownOpen(false)}
+                        className="dropdown-link"
+                        style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
+                      >
+                        <span style={{ marginRight: '8px' }}>❓</span> Help & Support
+                      </Link>
+
+                      <div style={{ height: '1px', backgroundColor: 'var(--border)', margin: '4px 0' }} />
+
+                      <button
+                        onClick={() => { setDropdownOpen(false); logoutUser(); }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          width: '100%', 
+                          background: 'none', 
+                          border: 'none', 
+                          padding: '10px 16px', 
+                          fontSize: '13px', 
+                          color: '#EF4444', 
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                        className="dropdown-link logout"
+                      >
+                        <span style={{ marginRight: '8px' }}>🚪</span> Sign Out
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <>
               <Link href="/login" className="btn btn-outline btn-sm">
