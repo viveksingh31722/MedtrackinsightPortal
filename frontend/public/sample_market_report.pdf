@@ -1,0 +1,51 @@
+MedTrackInsight - Data Dictionary & Sourcing Methodology
+======================================================
+
+This document outlines the schema specifications and data origin parameters for the sample datasets provided.
+
+1. Column Definitions:
+----------------------
+* Drug Name:
+  - Description: The non-proprietary generic name or brand name of the active molecule.
+  - Type: String
+  - Example: "Pembrolizumab (Keytruda)"
+
+* Indication:
+  - Description: The disease or medical condition targeted by the drug candidate.
+  - Type: String
+  - Example: "Non-Small Cell Lung Cancer (NSCLC)"
+
+* Mechanism of Action (MOA):
+  - Description: The specific biochemical interaction through which the drug produces its pharmacological effect.
+  - Type: String
+  - Example: "PD-1 Immune Checkpoint Inhibitor"
+
+* Current Development Phase:
+  - Description: The furthest stage achieved in the clinical trial registry pipeline.
+  - Type: Enum (Phase I, Phase II, Phase III, Marketed, Preregistration)
+  - Example: "Phase III"
+
+* Sponsor / Developer:
+  - Description: The sponsoring pharmaceutical company or research institution.
+  - Type: String
+  - Example: "AstraZeneca"
+
+* Estimated Launch Price (USD):
+  - Description: Standardized annual wholesale acquisition cost or estimated price index.
+  - Type: String
+  - Example: "150,000 / Year"
+
+* Active Competitor Count:
+  - Description: Number of distinct molecules targeting the same indication and mechanism in active trials.
+  - Type: Integer
+  - Example: 12
+
+* Forecasted 2027 Revenue ($B):
+  - Description: Projected global sales based on historical trends, epidemiological sizing, and competitor density.
+  - Type: Float
+  - Example: 27.5
+
+
+2. Compliance & Anonymization Protocols:
+-----------------------------------------
+All source database files are processed through structural k-anonymity checks and entirely stripped of individual Patient Health Information (PHI) prior to system ingestion, in strict compliance with GDPR and HIPAA frameworks.

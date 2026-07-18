@@ -9,6 +9,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(false);
   const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [activeOrder, setActiveOrder] = useState<any | null>(null);
+  const [activePlanType, setActivePlanType] = useState<'Basic' | 'Pro' | null>(null);
   const router = useRouter();
 
   // Razorpay Script loader
@@ -31,6 +32,7 @@ export default function SubscriptionPage() {
 
     try {
       setLoading(true);
+      setActivePlanType(planType);
       
       // 1. Create order on Express backend
       const res = await apiFetch(`${apiBaseUrl}/payment/order`, {
@@ -83,13 +85,15 @@ export default function SubscriptionPage() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 isSandbox: false,
+                planType,
+                amount: orderData.amount,
               }),
             });
 
             if (verifyRes.ok) {
               showToast('Payment successful! Subscription active.', 'success');
               await checkSession(); // Reload session cookies
-              router.push('/search');
+              router.push('/');
             } else {
               showToast('Payment verification failed. Invalid signature.', 'danger');
             }
@@ -130,13 +134,15 @@ export default function SubscriptionPage() {
           razorpay_payment_id: 'pay_sim_' + Math.random().toString(36).substring(7),
           razorpay_signature: 'sig_sim_ok',
           isSandbox: true,
+          planType: activePlanType,
+          amount: activeOrder.amount,
         }),
       });
 
       if (verifyRes.ok) {
         showToast('Payment simulation successful! Pro activated.', 'success');
         await checkSession();
-        router.push('/search');
+        router.push('/');
       } else {
         showToast('Simulation verification failed', 'danger');
       }

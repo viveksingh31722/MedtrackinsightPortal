@@ -26,3 +26,6 @@ backend/dev.db-journal
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Application Logs
+**/logs/

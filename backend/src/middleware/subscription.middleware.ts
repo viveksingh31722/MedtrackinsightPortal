@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
 import { AuthenticatedRequest } from './auth.middleware';
 import { prisma } from '../config/prisma';
 
@@ -44,7 +45,7 @@ export const requireSubscription = async (
     // User is authorized, pass control to controller
     next();
   } catch (error) {
-    console.error('Subscription verification middleware error:', error);
+    logger.error('Subscription verification middleware error:', { error: error });
     return res.status(500).json({ message: 'Internal server verification error' });
   }
 };

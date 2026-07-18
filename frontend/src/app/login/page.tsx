@@ -30,6 +30,12 @@ function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
 
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+
   // OTP Signup verification overlay state
   const [showSignupOtp, setShowSignupOtp] = useState(false);
   const [signupOtp, setSignupOtp] = useState('');
@@ -66,6 +72,9 @@ function AuthForm() {
     setActiveTab(initialTab);
     setForgotPassStep(0);
     setShowSignupOtp(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setShowNewPassword(false);
 
     if (initialTab === 'admin') {
       setEmail('admin@medtrack.com');
@@ -82,7 +91,7 @@ function AuthForm() {
       if (user.email === 'admin@medtrack.com') {
         router.push('/admin');
       } else {
-        router.push('/search');
+        router.push('/');
       }
     }
   }, [user, router]);
@@ -137,7 +146,7 @@ function AuthForm() {
           if (email === 'admin@medtrack.com') {
             router.push('/admin');
           } else {
-            router.push('/search');
+            router.push('/');
           }
         }
       } else {
@@ -176,7 +185,7 @@ function AuthForm() {
       if (res.ok) {
         loginUser(email, data.accessToken, data.user);
         showToast('Email verified and account registered successfully', 'success');
-        router.push('/search');
+        router.push('/');
       } else {
         showToast(data.message || 'Verification failed', 'danger');
       }
@@ -534,13 +543,34 @@ function AuthForm() {
                     <label htmlFor="new-password" className="form-label">New Password</label>
                     <input
                       id="new-password"
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
                       className="form-input"
                       required
                     />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 6px',
+                        }}
+                      >
+                        <span>👁️</span>
+                        <span>{showNewPassword ? 'Hide Password' : 'Show Password'}</span>
+                      </button>
+                    </div>
                     {newPassword && !isPasswordValid(newPassword) && (
                       <div style={{ fontSize: '12px', color: '#ff4d4d', marginTop: '6px', lineHeight: '1.4', fontWeight: 600 }}>
                         ⚠️ Password must be 10-14 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character.
@@ -551,7 +581,7 @@ function AuthForm() {
                     <label htmlFor="confirm-new" className="form-label">Confirm New Password</label>
                     <input
                       id="confirm-new"
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       placeholder="••••••••"
@@ -658,13 +688,34 @@ function AuthForm() {
                         <label htmlFor="auth-password" className="form-label" style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-main)' }}>Password</label>
                         <input
                           id="auth-password"
-                          type="password"
+                          type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
                           className="form-input"
                           required
                         />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-muted)',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 6px',
+                            }}
+                          >
+                            <span>👁️</span>
+                            <span>{showPassword ? 'Hide Password' : 'Show Password'}</span>
+                          </button>
+                        </div>
                         {activeTab === 'signup' && password && !isPasswordValid(password) && (
                           <div style={{ fontSize: '12px', color: '#ff4d4d', marginTop: '6px', lineHeight: '1.4', fontWeight: 600 }}>
                             ⚠️ Password must be 10-14 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character.
@@ -700,13 +751,34 @@ function AuthForm() {
                           <label htmlFor="auth-confirm" className="form-label" style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-main)' }}>Confirm Password</label>
                           <input
                             id="auth-confirm"
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
                             className="form-input"
                             required
                           />
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 6px',
+                              }}
+                            >
+                              <span>👁️</span>
+                              <span>{showConfirmPassword ? 'Hide Password' : 'Show Password'}</span>
+                            </button>
+                          </div>
                         </div>
                       )}
 

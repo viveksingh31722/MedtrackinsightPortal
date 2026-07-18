@@ -43,6 +43,21 @@ model User {
   prefTheme       String    @default("dark")
   prefDefaultCountry String @default("India")
   prefDefaultTherapeuticArea String @default("Oncology")
+  invoices        Invoice[]
+}
+
+model Invoice {
+  id             String   @id @default(uuid())
+  invoiceNumber  String   @unique
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Float
+  currency       String   @default("INR")
+  status         String   @default("paid")
+  planName       String
+  paymentId      String
+  orderId        String
+  createdAt      DateTime @default(now())
 }
 
 model PipelineProspector {

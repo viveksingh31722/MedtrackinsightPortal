@@ -1,4 +1,5 @@
 import { Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
 import { AuthenticatedRequest } from './auth.middleware';
 
 /**
@@ -22,7 +23,7 @@ export const requireAdmin = (
 
     next();
   } catch (error) {
-    console.error('Admin verification middleware error:', error);
+    logger.error('Admin verification middleware error:', { error: error });
     return res.status(500).json({ message: 'Internal server verification error' });
   }
 };

@@ -113,11 +113,11 @@ function NavigationHeader() {
               <AnimatePresence>
                 {dropdownOpen && (
                   <>
-                    <div 
-                      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 99 }} 
+                    <div
+                      style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 99 }}
                       onClick={() => setDropdownOpen(false)}
                     />
-                     <motion.div
+                    <motion.div
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -168,8 +168,8 @@ function NavigationHeader() {
 
                       <div style={{ height: '1px', backgroundColor: 'var(--border)', margin: '4px 0' }} />
 
-                      <Link 
-                        href="/profile?tab=personal-info" 
+                      <Link
+                        href="/profile?tab=personal-info"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -177,8 +177,8 @@ function NavigationHeader() {
                         <span style={{ marginRight: '8px' }}>👤</span> My Profile
                       </Link>
 
-                      <Link 
-                        href="/profile?tab=saved-items" 
+                      <Link
+                        href="/profile?tab=saved-items"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -186,8 +186,8 @@ function NavigationHeader() {
                         <span style={{ marginRight: '8px' }}>⭐</span> Saved Items
                       </Link>
 
-                      <Link 
-                        href="/profile?tab=downloads" 
+                      <Link
+                        href="/profile?tab=downloads"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -195,8 +195,8 @@ function NavigationHeader() {
                         <span style={{ marginRight: '8px' }}>📥</span> Downloads
                       </Link>
 
-                      <Link 
-                        href="/profile?tab=subscription" 
+                      <Link
+                        href="/profile?tab=subscription"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -204,8 +204,8 @@ function NavigationHeader() {
                         <span style={{ marginRight: '8px' }}>💳</span> Billing & Subscription
                       </Link>
 
-                      <Link 
-                        href="/profile?tab=preferences" 
+                      <Link
+                        href="/profile?tab=preferences"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -213,8 +213,8 @@ function NavigationHeader() {
                         <span style={{ marginRight: '8px' }}>⚙️</span> Settings & Preferences
                       </Link>
 
-                      <Link 
-                        href="/contact" 
+                      <Link
+                        href="/contact"
                         onClick={() => setDropdownOpen(false)}
                         className="dropdown-link"
                         style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', fontSize: '13px', color: 'var(--text-main)', textDecoration: 'none' }}
@@ -226,15 +226,15 @@ function NavigationHeader() {
 
                       <button
                         onClick={() => { setDropdownOpen(false); logoutUser(); }}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          width: '100%', 
-                          background: 'none', 
-                          border: 'none', 
-                          padding: '10px 16px', 
-                          fontSize: '13px', 
-                          color: '#EF4444', 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          width: '100%',
+                          background: 'none',
+                          border: 'none',
+                          padding: '10px 16px',
+                          fontSize: '13px',
+                          color: '#EF4444',
                           cursor: 'pointer',
                           textAlign: 'left'
                         }}
@@ -392,6 +392,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
             <Link href="/about" className="nav-link">Corporate R&D</Link>
             <Link href="/subscription" className="nav-link">Plan Matrix</Link>
             <Link href="/contact" className="nav-link">Contact Support</Link>
+            <Link href="/refund-policy" className="nav-link">Refund Policy</Link>
             <Link href="/demo" className="nav-link">Enterprise Demo</Link>
           </div>
           <p className="footer-copyright">

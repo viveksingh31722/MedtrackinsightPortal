@@ -7,14 +7,9 @@ import { useApp } from '../context/AppContext';
 type TabType = 
   | 'personal-info'
   | 'subscription'
-  | 'stats'
-  | 'saved-items'
-  | 'activity'
-  | 'downloads'
   | 'notifications'
   | 'security'
-  | 'preferences'
-  | 'support';
+  | 'preferences';
 
 function ProfileDashboard() {
   const searchParams = useSearchParams();
@@ -25,9 +20,9 @@ function ProfileDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const urlTab = new URLSearchParams(window.location.search).get('tab') as TabType;
-      if (urlTab) return urlTab;
+      if (urlTab && ['personal-info', 'subscription', 'notifications', 'security', 'preferences'].includes(urlTab)) return urlTab;
       const cachedTab = sessionStorage.getItem('activeProfileTab') as TabType;
-      if (cachedTab) return cachedTab;
+      if (cachedTab && ['personal-info', 'subscription', 'notifications', 'security', 'preferences'].includes(cachedTab)) return cachedTab;
     }
     return 'personal-info';
   });
@@ -40,6 +35,8 @@ function ProfileDashboard() {
   const [country, setCountry] = useState(user?.country || '');
   const [department, setDepartment] = useState(user?.department || '');
   const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
 
   // Form states for Preferences & Notifications
   const [prefNewTrials, setPrefNewTrials] = useState(user?.prefNewTrials ?? true);
@@ -99,6 +96,49 @@ function ProfileDashboard() {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
+
+  useEffect(() => {
+    if (activeTab === 'subscription' && user) {
+      const fetchInvoices = async () => {
+        try {
+          setLoadingInvoices(true);
+          const response = await apiFetch(`${apiBaseUrl}/payment/invoices`);
+          if (response.ok) {
+            const data = await response.json();
+            setInvoices(data.invoices || []);
+          }
+        } catch (err) {
+          console.error('Error fetching invoices:', err);
+        } finally {
+          setLoadingInvoices(false);
+        }
+      };
+      fetchInvoices();
+    }
+  }, [activeTab, user]);
+
+  const handleDownloadInvoice = async (invoiceId: string, invoiceNumber: string) => {
+    try {
+      showToast(`Generating invoice ${invoiceNumber}...`, 'info');
+      const response = await apiFetch(`${apiBaseUrl}/payment/invoice/${invoiceId}/download`);
+      if (!response.ok) {
+        throw new Error('Failed to download invoice');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice_${invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast(`Invoice ${invoiceNumber} downloaded successfully.`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Error downloading invoice PDF', 'danger');
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,34 +269,6 @@ function ProfileDashboard() {
             💳 Subscription
           </button>
           <button 
-            onClick={() => changeTab('stats')}
-            className={`auth-tab ${activeTab === 'stats' ? 'active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
-          >
-            📊 Usage Statistics
-          </button>
-          <button 
-            onClick={() => changeTab('saved-items')}
-            className={`auth-tab ${activeTab === 'saved-items' ? 'active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
-          >
-            ⭐ Saved Items
-          </button>
-          <button 
-            onClick={() => changeTab('activity')}
-            className={`auth-tab ${activeTab === 'activity' ? 'active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
-          >
-            🔄 Recent Activity
-          </button>
-          <button 
-            onClick={() => changeTab('downloads')}
-            className={`auth-tab ${activeTab === 'downloads' ? 'active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
-          >
-            📥 Downloads
-          </button>
-          <button 
             onClick={() => changeTab('notifications')}
             className={`auth-tab ${activeTab === 'notifications' ? 'active' : ''}`}
             style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
@@ -276,13 +288,6 @@ function ProfileDashboard() {
             style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
           >
             ⚙️ Preferences
-          </button>
-          <button 
-            onClick={() => changeTab('support')}
-            className={`auth-tab ${activeTab === 'support' ? 'active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', borderRadius: '6px', fontSize: '13px' }}
-          >
-            ❓ Support
           </button>
         </div>
 
@@ -382,12 +387,38 @@ function ProfileDashboard() {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div className="card" style={{ padding: '16px', fontSize: '13px' }}>
-                    <strong>Billing Invoices</strong>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', color: 'var(--text-muted)' }}>
-                      <span>02 Jul 2026 - Pro Tier</span>
-                      <a href="#" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Download PDF</a>
-                    </div>
+                  <div className="card" style={{ padding: '16px', fontSize: '13px', minHeight: '120px' }}>
+                    <strong style={{ display: 'block', marginBottom: '8px' }}>Billing Invoices</strong>
+                    {loadingInvoices ? (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>Loading invoices...</div>
+                    ) : invoices.length === 0 ? (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px' }}>No billing invoices found.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                        {invoices.map((inv) => (
+                          <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', color: 'var(--text-muted)' }}>
+                            <span>
+                              {new Date(inv.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - {inv.planName}
+                            </span>
+                            <button
+                              onClick={() => handleDownloadInvoice(inv.id, inv.invoiceNumber)}
+                              style={{
+                                color: 'var(--primary)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0,
+                                textDecoration: 'underline',
+                                fontSize: '13px',
+                                fontFamily: 'inherit'
+                              }}
+                            >
+                              Download PDF
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   <div style={{ display: 'flex', gap: '12px' }}>
@@ -403,209 +434,7 @@ function ProfileDashboard() {
             </div>
           )}
 
-          {/* TAB 3: USAGE STATISTICS */}
-          {activeTab === 'stats' && (
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Usage Statistics</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                High-level dashboard monitoring your local query metrics.
-              </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-                <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)' }}>542</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>Searches This Month</div>
-                </div>
-                <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)' }}>{user.downloadCount || 38}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>Spreadsheet Exports</div>
-                </div>
-                <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)' }}>94</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>Saved Trials</div>
-                </div>
-                <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)' }}>21</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>Saved Companies</div>
-                </div>
-                <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)' }}>18</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>Saved Drugs</div>
-                </div>
-              </div>
-
-              {/* Mini dashboard summary card */}
-              <div className="card" style={{ padding: '20px', backgroundColor: 'var(--bg-alt)' }}>
-                <strong style={{ fontSize: '14px', display: 'block', marginBottom: '12px' }}>Total Usage Summary</strong>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', fontSize: '13px' }}>
-                  <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Account Created</div>
-                    <strong>{user.createdAt ? new Date(user.createdAt).getFullYear() : '2026'}</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Saved Items</div>
-                    <strong>137 total</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Searches All-Time</div>
-                    <strong>3,482 queries</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: 'var(--text-muted)' }}>Exports All-Time</div>
-                    <strong>124 files</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: SAVED ITEMS */}
-          {activeTab === 'saved-items' && (
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Saved Items</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                Retrieve your bookmarked molecular details and corporate deals.
-              </p>
-
-              {/* Sub-tabs */}
-              <div className="auth-tabs auth-tabs-four" style={{ maxWidth: '480px', marginBottom: '20px' }}>
-                <button onClick={() => setSavedItemsTab('drugs')} className={`auth-tab ${savedItemsTab === 'drugs' ? 'active' : ''}`}>⭐ Drugs</button>
-                <button onClick={() => setSavedItemsTab('trials')} className={`auth-tab ${savedItemsTab === 'trials' ? 'active' : ''}`}>⭐ Trials</button>
-                <button onClick={() => setSavedItemsTab('companies')} className={`auth-tab ${savedItemsTab === 'companies' ? 'active' : ''}`}>⭐ Companies</button>
-                <button onClick={() => setSavedItemsTab('deals')} className={`auth-tab ${savedItemsTab === 'deals' ? 'active' : ''}`}>⭐ Deals</button>
-              </div>
-
-              <div className="card" style={{ padding: '16px 0', border: 'none' }}>
-                {savedItemsTab === 'drugs' && (
-                  <table className="data-table" style={{ fontSize: '13px' }}>
-                    <thead>
-                      <tr><th>Drug Name</th><th>Therapeutic Target</th><th>Focus Area</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td><strong>Pembrolizumab</strong></td><td>PD-1 Receptor Inhibitor</td><td>Oncology</td></tr>
-                      <tr><td><strong>Semaglutide</strong></td><td>GLP-1 Receptor Agonist</td><td>Endocrinology / Obesity</td></tr>
-                      <tr><td><strong>Adalimumab</strong></td><td>TNF-Alpha Inhibitor</td><td>Immunology</td></tr>
-                    </tbody>
-                  </table>
-                )}
-
-                {savedItemsTab === 'trials' && (
-                  <table className="data-table" style={{ fontSize: '13px' }}>
-                    <thead>
-                      <tr><th>Trial NCT ID</th><th>Title</th><th>Phase</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td><strong>NCT05219420</strong></td><td>Semaglutide Obesity Clinical Outcome Study</td><td>Phase III</td></tr>
-                      <tr><td><strong>NCT04829311</strong></td><td>Pembrolizumab Non-Small Cell Lung Study</td><td>Phase II</td></tr>
-                    </tbody>
-                  </table>
-                )}
-
-                {savedItemsTab === 'companies' && (
-                  <table className="data-table" style={{ fontSize: '13px' }}>
-                    <thead>
-                      <tr><th>Company Name</th><th>Headquarters</th><th>Principal Pipeline Focus</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td><strong>Pfizer Inc</strong></td><td>New York, USA</td><td>Vaccines, Oncology & Immunology</td></tr>
-                      <tr><td><strong>Merck & Co.</strong></td><td>New Jersey, USA</td><td>Immunotherapy & Oncology</td></tr>
-                      <tr><td><strong>Novo Nordisk</strong></td><td>Bagsvaerd, Denmark</td><td>Diabetes & Metabolic Disorders</td></tr>
-                    </tbody>
-                  </table>
-                )}
-
-                {savedItemsTab === 'deals' && (
-                  <table className="data-table" style={{ fontSize: '13px' }}>
-                    <thead>
-                      <tr><th>Ref Deal ID</th><th>Licensor / Licensee</th><th>Deal Size</th></tr>
-                    </thead>
-                    <tbody>
-                      <tr><td><strong>DEAL_2026_09A</strong></td><td>Pfizer / BioNTech Licensing Deal</td><td>$450 Million</td></tr>
-                      <tr><td><strong>DEAL_2026_11F</strong></td><td>Merck / Moderna Oncology Deal</td><td>$1.2 Billion</td></tr>
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: RECENT ACTIVITY */}
-          {activeTab === 'activity' && (
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Recent Activity</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                A chronology of your recent searches and bookmarks.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Yesterday</span>
-                    <strong style={{ display: 'block', fontSize: '14px', color: 'var(--primary)', marginTop: '2px' }}>Viewed: Pembrolizumab</strong>
-                  </div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>14:22 PM</span>
-                </div>
-                
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Yesterday</span>
-                    <strong style={{ display: 'block', fontSize: '14px', color: 'var(--primary)', marginTop: '2px' }}>Exported: Phase III Oncology Trials</strong>
-                  </div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>09:15 AM</span>
-                </div>
-
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>3 days ago</span>
-                    <strong style={{ display: 'block', fontSize: '14px', color: 'var(--primary)', marginTop: '2px' }}>Saved: Pfizer Licensing Deal</strong>
-                  </div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>18:40 PM</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 6: DOWNLOADS */}
-          {activeTab === 'downloads' && (
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Download History</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                Access previously compiled spreadsheet exports.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '14px' }}>Clinical_Trials_June.xlsx</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Spreadsheet Export • 4.2 MB</span>
-                  </div>
-                  <button onClick={() => showToast('Downloading spreadsheet...', 'success')} className="btn btn-outline btn-sm">
-                    📥 Download
-                  </button>
-                </div>
-
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '14px' }}>Drug_Pipeline.pdf</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Pipeline Summary • 1.8 MB</span>
-                  </div>
-                  <button onClick={() => showToast('Downloading PDF file...', 'success')} className="btn btn-outline btn-sm">
-                    📥 Download
-                  </button>
-                </div>
-
-                <div className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ display: 'block', fontSize: '14px' }}>Licensing_Deals.csv</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>CSV Deals Dump • 850 KB</span>
-                  </div>
-                  <button onClick={() => showToast('Downloading CSV table...', 'success')} className="btn btn-outline btn-sm">
-                    📥 Download
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* TAB 7: NOTIFICATIONS */}
           {activeTab === 'notifications' && (
@@ -749,45 +578,7 @@ function ProfileDashboard() {
             </div>
           )}
 
-          {/* TAB 10: SUPPORT */}
-          {activeTab === 'support' && (
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Help & Support</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>
-                Troubleshoot errors and connect with clinical systems support agents.
-              </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px' }}>
-                <div className="card" style={{ padding: '24px' }}>
-                  <strong style={{ display: 'block', fontSize: '16px', marginBottom: '8px' }}>Contact Support Desk</strong>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                    Need urgent operational assistance? Open a ticket directly with developers.
-                  </p>
-                  <button onClick={() => router.push('/contact')} className="btn btn-primary btn-sm">
-                    ✉️ Open Ticket
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div className="card" style={{ padding: '16px', fontSize: '13px' }}>
-                    <strong>Documentation Hub</strong>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                      <span>REST API Integration Docs</span>
-                      <a href="#" style={{ color: 'var(--primary)', textDecoration: 'none' }}>View Docs</a>
-                    </div>
-                  </div>
-                  
-                  <div className="card" style={{ padding: '16px', fontSize: '13px' }}>
-                    <strong>Platform Health</strong>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                      <span>All Services Online</span>
-                      <span style={{ color: 'var(--badge-success)', fontWeight: 600 }}>100% Uptime</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>

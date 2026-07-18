@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
 import { verifyAccessToken, TokenPayload } from '../utils/jwt';
 
 // Express concept: We can extend the standard Request interface to include custom fields.
@@ -44,7 +45,7 @@ export const authenticateJWT = (
     
     next(); // Pass control to the next middleware or controller function
   } catch (error) {
-    console.error('JWT verification error:', error);
+    logger.error('JWT verification error:', { error: error });
     return res.status(403).json({ message: 'Invalid or expired access token' });
   }
 };

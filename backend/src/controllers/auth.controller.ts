@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { logger } from '../utils/logger';
 import bcrypt from 'bcrypt';
 import { prisma } from '../config/prisma';
 import { env } from '../config/env';
@@ -84,7 +85,7 @@ export const register = async (req: Request, res: Response) => {
       email,
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', { error: error });
     return res.status(500).json({ message: 'Internal registration error' });
   }
 };
@@ -165,7 +166,7 @@ export const login = async (req: Request, res: Response) => {
       accessToken,
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during login' });
   }
 };
@@ -208,7 +209,7 @@ export const refresh = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Refresh token error:', error);
+    logger.error('Refresh token error:', { error: error });
     return res.status(403).json({ message: 'Invalid refresh token' });
   }
 };
@@ -236,7 +237,7 @@ export const logout = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', { error: error });
     return res.status(500).json({ message: 'Error during logout session teardown' });
   }
 };
@@ -286,7 +287,7 @@ export const getMe = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get me error:', error);
+    logger.error('Get me error:', { error: error });
     return res.status(500).json({ message: 'Error fetching profile' });
   }
 };
@@ -393,7 +394,7 @@ export const verifySignup = async (req: Request, res: Response) => {
       accessToken,
     });
   } catch (error) {
-    console.error('Verify signup error:', error);
+    logger.error('Verify signup error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during verification' });
   }
 };
@@ -433,7 +434,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       email,
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during password reset request' });
   }
 };
@@ -480,7 +481,7 @@ export const verifyResetOtp = async (req: Request, res: Response) => {
       otp,
     });
   } catch (error) {
-    console.error('Verify reset OTP error:', error);
+    logger.error('Verify reset OTP error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during OTP verification' });
   }
 };
@@ -544,7 +545,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       message: 'Password reset successfully. You can now login with your new password.',
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during password reset' });
   }
 };
@@ -598,7 +599,7 @@ export const changePassword = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during password update' });
   }
 };
@@ -652,7 +653,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during profile update' });
   }
 };
@@ -717,7 +718,7 @@ export const updatePreferences = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Update preferences error:', error);
+    logger.error('Update preferences error:', { error: error });
     return res.status(500).json({ message: 'Internal server error during preferences update' });
   }
 };

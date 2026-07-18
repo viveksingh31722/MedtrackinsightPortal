@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { verifyAccessToken } from '../utils/jwt';
 import { esClient, checkEsHealth } from '../config/elasticsearch';
+import { logger } from '../utils/logger';
 
 // Helper to determine if a request has an active subscription
 const checkSubscriptionStatus = async (req: Request): Promise<boolean> => {
@@ -248,7 +249,7 @@ export const searchMedicines = async (req: Request, res: Response) => {
           });
         }
 
-        console.log(`🔍 Querying Elasticsearch index "${indexName}" for search string: "${searchStr}"...`);
+        logger.info(`🔍 Querying Elasticsearch index "${indexName}" for search string: "${searchStr}"...`);
         const searchResponse = await esClient.search({
           index: indexName,
           body: queryBody
@@ -277,16 +278,16 @@ export const searchMedicines = async (req: Request, res: Response) => {
             : (searchResponse.hits.total as any)?.value || 0;
 
           isEsUsed = true;
-          console.log(`✅ Elasticsearch search returned ${paginated.length} ordered records.`);
+          logger.info(`✅ Elasticsearch search returned ${paginated.length} ordered records.`);
         }
       } catch (esError) {
-        console.error('⚠️ Elasticsearch query failed, falling back to database search:', esError);
+        logger.warn('⚠️ Elasticsearch query failed, falling back to database search:', { error: esError });
       }
     }
 
     // 2. Fallback: Direct PostgreSQL Prisma Search
     if (!isEsUsed) {
-      console.log('🔌 Running direct database search query fallback...');
+      logger.info('🔌 Running direct database search query fallback...');
       const andClauses: any[] = [];
 
       if (query && query.toString().trim() !== '') {
@@ -390,7 +391,7 @@ export const searchMedicines = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Search error:', error);
+    logger.error('Search error:', { error });
     return res.status(500).json({ message: 'Internal server error while searching clinical data' });
   }
 };
@@ -414,7 +415,7 @@ export const getMedicineById = async (req: Request, res: Response) => {
 
     return res.status(404).json({ message: 'Medicine record not found' });
   } catch (error) {
-    console.error('Get medicine error:', error);
+    logger.error('Get medicine error:', { error });
     return res.status(500).json({ message: 'Error retrieving medicine details' });
   }
 };
@@ -687,7 +688,7 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
     res.setHeader('Content-Disposition', `attachment; filename=medtrack_export_${Date.now()}.csv`);
     return res.status(200).send(csvContent);
   } catch (error) {
-    console.error('Download error:', error);
+    logger.error('Download error:', { error });
     return res.status(500).json({ message: 'Error compiling CSV file' });
   }
 };
@@ -976,7 +977,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
 
     return res.status(200).json({ suggestions: uniqueSuggestions });
   } catch (error) {
-    console.error('Suggestions error:', error);
+    logger.error('Suggestions error:', { error });
     return res.status(500).json({ message: 'Error fetching suggestions' });
   }
 };
@@ -1268,7 +1269,7 @@ export const getMedicineAnalysis = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Analysis error:', error);
+    logger.error('Analysis error:', { error });
     return res.status(500).json({ message: 'Error retrieving analysis statistics' });
   }
 };

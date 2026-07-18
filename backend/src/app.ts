@@ -2,6 +2,8 @@ import { env } from './config/env';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { medicineRoutes } from './routes/medicine.routes';
 import { paymentRoutes } from './routes/payment.routes';
@@ -11,6 +13,18 @@ import { createOrder, verifyPayment } from './controllers/payment.controller';
 import { authenticateJWT } from './middleware/auth.middleware';
 
 const app = express();
+
+// Configure HTTP request logger middleware streaming through Winston
+const morganMiddleware = morgan(
+  ':remote-addr - :method :url :status :res[content-length] - :response-time ms',
+  {
+    stream: {
+      write: (message) => logger.http(message.trim()),
+    },
+  }
+);
+app.use(morganMiddleware);
+
 
 // Trust proxy for rate limiting (first hop)
 app.set('trust proxy', 1);
@@ -55,7 +69,7 @@ app.use((req, res) => {
 
 // Express global exception catcher
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled runtime server exception:', err);
+  logger.error('Unhandled runtime server exception:', { error: err.stack || err.message || err });
   res.status(err.status || 500).json({
     message: err.message || 'An unexpected error occurred on the application server.',
   });

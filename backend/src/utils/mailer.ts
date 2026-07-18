@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { logger } from '../utils/logger';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -22,22 +23,22 @@ export const sendOtpEmail = async (
   type: 'SIGNUP' | 'PASSWORD_RESET'
 ): Promise<boolean> => {
   // Always log OTP and write to frontend/public/otp.txt for development testing
-  console.log('\n======================================================');
-  console.log('📬 [DEVELOPMENT OTP LOG SERVICE]');
-  console.log(`   To:       ${email}`);
-  console.log(`   OTP Code: ${otp}`);
-  console.log(`   Type:     ${type}`);
-  console.log('======================================================\n');
+  logger.info('\n======================================================');
+  logger.info('📬 [DEVELOPMENT OTP LOG SERVICE]');
+  logger.info(`   To:       ${email}`);
+  logger.info(`   OTP Code: ${otp}`);
+  logger.info(`   Type:     ${type}`);
+  logger.info('======================================================\n');
 
   try {
     if (process.env.NODE_ENV !== 'production') {
       const fs = require('fs');
       const otpPath = path.resolve(__dirname, '../../../frontend/public/otp.txt');
       fs.writeFileSync(otpPath, otp);
-      console.log(`[DEVELOPMENT] Saved OTP ${otp} to frontend public/otp.txt`);
+      logger.info(`[DEVELOPMENT] Saved OTP ${otp} to frontend public/otp.txt`);
     }
   } catch (writeErr) {
-    console.error('Error writing otp.txt:', writeErr);
+    logger.error('Error writing otp.txt:', { error: writeErr });
   }
 
   const subject =
@@ -118,10 +119,10 @@ export const sendOtpEmail = async (
         html: htmlContent,
       });
 
-      console.log(`✉️ Email successfully dispatched via SMTP to ${email}.`);
+      logger.info(`✉️ Email successfully dispatched via SMTP to ${email}.`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to dispatch email via SMTP. Falling back to console log...', error);
+      logger.error('❌ Failed to dispatch email via SMTP. Falling back to console log...', { error: error });
     }
   }
 
@@ -177,10 +178,10 @@ const sendEmailNotification = async (
         html: html,
       });
 
-      console.log(`✉️ Notification email successfully dispatched via SMTP to ${toAddress}.`);
+      logger.info(`✉️ Notification email successfully dispatched via SMTP to ${toAddress}.`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to dispatch notification email via SMTP:', error);
+      logger.error('❌ Failed to dispatch notification email via SMTP:', { error: error });
     }
   } else {
     console.warn('⚠️ SMTP settings are not fully configured. Notification email skipped.');
@@ -197,11 +198,11 @@ export const sendContactEmail = async (
   message: string
 ): Promise<boolean> => {
   // Log message to console for development reference
-  console.log('\n======================================================');
-  console.log('📬 [DEVELOPMENT CONTACT MESSAGE LOG]');
-  console.log(`   From: ${name} <${email}>`);
-  console.log(`   Message: ${message}`);
-  console.log('======================================================\n');
+  logger.info('\n======================================================');
+  logger.info('📬 [DEVELOPMENT CONTACT MESSAGE LOG]');
+  logger.info(`   From: ${name} <${email}>`);
+  logger.info(`   Message: ${message}`);
+  logger.info('======================================================\n');
 
   const subject = `[Contact Us] New Message from ${name}`;
   const messageText = `Name: ${name}\nEmail: ${email}\nMessage:\n${message}`;
@@ -260,12 +261,12 @@ export const sendDemoEmail = async (
   requirements: string
 ): Promise<boolean> => {
   // Log request to console for development reference
-  console.log('\n======================================================');
-  console.log('📬 [DEVELOPMENT DEMO REQUEST LOG]');
-  console.log(`   From: ${name} <${email}>`);
-  console.log(`   Company: ${company} (${jobTitle})`);
-  console.log(`   Requirements: ${requirements}`);
-  console.log('======================================================\n');
+  logger.info('\n======================================================');
+  logger.info('📬 [DEVELOPMENT DEMO REQUEST LOG]');
+  logger.info(`   From: ${name} <${email}>`);
+  logger.info(`   Company: ${company} (${jobTitle})`);
+  logger.info(`   Requirements: ${requirements}`);
+  logger.info('======================================================\n');
 
   const subject = `[Request Demo] New Booking from ${name} at ${company}`;
   const messageText = `Name: ${name}\nJob Title: ${jobTitle}\nCompany: ${company}\nEmail: ${email}\nRequirements:\n${requirements}`;
@@ -361,10 +362,10 @@ const sendSystemToUserEmail = async (
         html: html,
       });
 
-      console.log(`✉️ System-to-user email successfully dispatched via SMTP to ${toEmail}.`);
+      logger.info(`✉️ System-to-user email successfully dispatched via SMTP to ${toEmail}.`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to dispatch system-to-user email to ${toEmail} via SMTP:`, error);
+      logger.error(`❌ Failed to dispatch system-to-user email to ${toEmail} via SMTP:`, { error: error });
     }
   } else {
     console.warn('⚠️ SMTP settings are not fully configured. System-to-user email skipped.');

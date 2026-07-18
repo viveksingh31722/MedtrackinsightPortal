@@ -118,6 +118,8 @@ function SearchResultsContent() {
   // Suggestions UI states
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [originalQuery, setOriginalQuery] = useState(queryParam);
 
   // API data states
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -185,32 +187,89 @@ function SearchResultsContent() {
   const handleToggleSuggestion = (suggestion: any) => {
     const text = suggestion.text;
     const type = suggestion.type;
+    
+    const terms = query.split(',').map((s: string) => s.trim());
+    const lastTerm = terms[terms.length - 1] || '';
+
     if (type === 'country') {
       const next = selectedCountries.includes(text)
         ? selectedCountries.filter(c => c !== text)
         : [...selectedCountries, text];
       setSelectedCountries(next);
+      const nextTerms = terms.slice(0, -1);
+      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
+      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
     } else if (type === 'disease') {
       const next = selectedDiseases.includes(text)
         ? selectedDiseases.filter(d => d !== text)
         : [...selectedDiseases, text];
       setSelectedDiseases(next);
+      const nextTerms = terms.slice(0, -1);
+      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
+      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
     } else if (type === 'sponsor') {
       const next = selectedSponsors.includes(text)
         ? selectedSponsors.filter(s => s !== text)
         : [...selectedSponsors, text];
       setSelectedSponsors(next);
+      const nextTerms = terms.slice(0, -1);
+      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
+      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
     } else if (type === 'developmentPhase' || type === 'therapyArea') {
       const next = selectedPhases.includes(text)
         ? selectedPhases.filter(p => p !== text)
         : [...selectedPhases, text];
       setSelectedPhases(next);
+      const nextTerms = terms.slice(0, -1);
+      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
+      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
     } else {
-      const keywords = query.split(',').map((s: string) => s.trim()).filter(Boolean);
-      const nextKeywords = keywords.includes(text)
-        ? keywords.filter((k: string) => k !== text)
-        : [...keywords, text];
-      setQuery(nextKeywords.join(', '));
+      const nextTerms = [...terms.slice(0, -1), text];
+      setQuery(nextTerms.join(', '));
+      setOriginalQuery(nextTerms.join(', '));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestionIndex((prev) => {
+        const next = prev < suggestions.length - 1 ? prev + 1 : prev;
+        if (next !== -1) {
+          const suggestion = suggestions[next];
+          const terms = originalQuery.split(',').map(s => s.trim());
+          const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
+          setQuery(nextVal);
+        }
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestionIndex((prev) => {
+        const next = prev > -1 ? prev - 1 : -1;
+        if (next === -1) {
+          setQuery(originalQuery);
+        } else {
+          const suggestion = suggestions[next];
+          const terms = originalQuery.split(',').map(s => s.trim());
+          const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
+          setQuery(nextVal);
+        }
+        return next;
+      });
+    } else if (e.key === 'Enter') {
+      if (activeSuggestionIndex !== -1) {
+        e.preventDefault();
+        handleToggleSuggestion(suggestions[activeSuggestionIndex]);
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+      setQuery(originalQuery);
     }
   };
 
@@ -248,17 +307,17 @@ function SearchResultsContent() {
 
   // Autocomplete fetcher
   useEffect(() => {
-    if (query.trim() === '') {
+    if (originalQuery.trim() === '') {
       setSuggestions([]);
       return;
     }
     
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await apiFetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(query)}&category=${encodeURIComponent(selectedCategory)}`);
+        const res = await apiFetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(originalQuery)}&category=${encodeURIComponent(selectedCategory)}`);
         if (res.ok) {
           const data = await res.json();
-          setSuggestions(data.suggestions);
+          setSuggestions(data.suggestions || []);
         }
       } catch (err) {
         console.error('Suggestions fetch error:', err);
@@ -266,11 +325,12 @@ function SearchResultsContent() {
     }, 200); // 200ms debounce
     
     return () => clearTimeout(delayDebounceFn);
-  }, [query, selectedCategory, apiBaseUrl]);
+  }, [originalQuery, selectedCategory, apiBaseUrl]);
 
   // Track page parameters when URL changes
   useEffect(() => {
     setQuery(queryParam);
+    setOriginalQuery(queryParam);
     setField(fieldParam);
     setDataset(datasetParam);
     setSelectedCategory(searchParams.get('category') || '');
@@ -606,9 +666,18 @@ function SearchResultsContent() {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuery(val);
+                  setOriginalQuery(val);
+                  setActiveSuggestionIndex(-1);
+                }}
+                onKeyDown={handleKeyDown}
                 onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onBlur={() => setTimeout(() => {
+                  setShowSuggestions(false);
+                  setActiveSuggestionIndex(-1);
+                }, 200)}
                 placeholder="Search..."
                 className="form-input"
                 style={{ height: '42px', width: '100%' }}
@@ -635,9 +704,16 @@ function SearchResultsContent() {
                     return (
                       <div
                         key={idx}
-                        className="autocomplete-item"
+                        className={`autocomplete-item ${activeSuggestionIndex === idx ? 'active' : ''}`}
                         onClick={() => handleToggleSuggestion(suggestion)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer' }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px', 
+                          padding: '10px 14px', 
+                          cursor: 'pointer',
+                          backgroundColor: activeSuggestionIndex === idx ? 'var(--bg-alt)' : 'transparent',
+                        }}
                       >
                         <input
                           type="checkbox"
@@ -1987,7 +2063,7 @@ function SearchResultsContent() {
                         </td>
                         <td>
                           <span className={`badge ${
-                            med.phase.includes('Approved') ? 'badge-success' : 'badge-warning'
+                            (med.phase || '').includes('Approved') ? 'badge-success' : 'badge-warning'
                           }`}>
                             {med.phase}
                           </span>

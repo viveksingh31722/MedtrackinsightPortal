@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { logger } from '../utils/logger';
 import xlsx from 'xlsx';
 import { prisma } from '../config/prisma';
 import { esClient } from '../config/elasticsearch';
@@ -159,7 +160,7 @@ export const uploadMedicineSheet = async (req: Request, res: Response) => {
     if (mode === 'clear') {
       await prisma.pipelineProspector.deleteMany({});
       await prisma.patentSalesForecasting.deleteMany({});
-      console.log('Database catalog tables cleared before overwrite.');
+      logger.info('Database catalog tables cleared before overwrite.');
     }
 
     let pipelineInserted = 0;
@@ -263,7 +264,7 @@ export const uploadMedicineSheet = async (req: Request, res: Response) => {
     try {
       const { exec } = require('child_process');
       exec('npx ts-node prisma/reindex.ts', (err: any) => {
-        if (err) console.error('Elasticsearch background re-indexing failed:', err);
+        if (err) logger.error('Elasticsearch background re-indexing failed:', { error: err });
       });
     } catch (esErr) {
       console.warn('Failed to start background Elasticsearch indexing:', esErr);
@@ -281,7 +282,7 @@ export const uploadMedicineSheet = async (req: Request, res: Response) => {
       recordsCount: pipelineInserted + pipelineUpdated + forecastingInserted + forecastingUpdated,
     });
   } catch (error) {
-    console.error('File import error:', error);
+    logger.error('File import error:', { error: error });
     return res.status(500).json({ message: 'Error processing database update sheet.' });
   }
 };
@@ -321,7 +322,7 @@ export const deleteMedicine = async (req: Request, res: Response) => {
 
     return res.status(404).json({ message: 'Record not found' });
   } catch (error) {
-    console.error('Delete error:', error);
+    logger.error('Delete error:', { error: error });
     return res.status(500).json({ message: 'Error deleting database record' });
   }
 };
@@ -353,7 +354,7 @@ export const clearAllMedicines = async (req: Request, res: Response) => {
       message: `Successfully cleared all data. Removed ${delPipeline.count} pipeline and ${delForecasting.count} forecasting records.` 
     });
   } catch (error) {
-    console.error('Clear catalog error:', error);
+    logger.error('Clear catalog error:', { error: error });
     return res.status(500).json({ message: 'Error clearing database tables.' });
   }
 };
@@ -377,17 +378,17 @@ export const postDemoRequest = async (req: Request, res: Response) => {
 
     // Send demo request notification email in the background
     sendDemoEmail(name, company, email, jobTitle, requirements || '').catch(err => {
-      console.error('Background sendDemoEmail failed:', err);
+      logger.error('Background sendDemoEmail failed:', { error: err });
     });
 
     // Send thank you confirmation email to the user in the background
     sendDemoThankYouEmail(name, company, email, jobTitle, requirements || '').catch(err => {
-      console.error('Background sendDemoThankYouEmail failed:', err);
+      logger.error('Background sendDemoThankYouEmail failed:', { error: err });
     });
 
     return res.status(201).json({ message: 'Your demo request has been successfully registered.' });
   } catch (error) {
-    console.error('Demo request submission error:', error);
+    logger.error('Demo request submission error:', { error: error });
     return res.status(500).json({ message: 'Error registering demo request.' });
   }
 };
@@ -405,17 +406,17 @@ export const postContactMessage = async (req: Request, res: Response) => {
 
     // Send contact notification email in the background
     sendContactEmail(name, email, message).catch(err => {
-      console.error('Background sendContactEmail failed:', err);
+      logger.error('Background sendContactEmail failed:', { error: err });
     });
 
     // Send thank you confirmation email to the user in the background
     sendContactThankYouEmail(name, email, message).catch(err => {
-      console.error('Background sendContactThankYouEmail failed:', err);
+      logger.error('Background sendContactThankYouEmail failed:', { error: err });
     });
 
     return res.status(201).json({ message: 'Message recorded successfully.' });
   } catch (error) {
-    console.error('Contact message error:', error);
+    logger.error('Contact message error:', { error: error });
     return res.status(500).json({ message: 'Error registering message.' });
   }
 };
