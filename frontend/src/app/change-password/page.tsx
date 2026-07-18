@@ -27,7 +27,7 @@ export default function ChangePasswordPage() {
       showToast('Please log in before attempting to change your password.', 'warning');
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, showToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

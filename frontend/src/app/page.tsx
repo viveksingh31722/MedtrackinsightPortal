@@ -622,8 +622,9 @@ export default function HomePage() {
                     </div>
                     <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border)', borderRadius: '99px', overflow: 'hidden' }}>
                       <motion.div
-                        style={{ height: '100%', backgroundColor: 'var(--accent)', borderRadius: '99px' }}
-                        animate={{ width: `${derivedIntegrity}%` }}
+                        style={{ height: '100%', width: '100%', backgroundColor: 'var(--accent)', borderRadius: '99px', transformOrigin: 'left' }}
+                        initial={false}
+                        animate={{ scaleX: derivedIntegrity / 100 }}
                         transition={{ duration: 0.3 }}
                       />
                     </div>

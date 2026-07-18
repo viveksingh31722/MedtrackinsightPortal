@@ -235,30 +235,26 @@ function SearchResultsContent() {
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveSuggestionIndex((prev) => {
-        const next = prev < suggestions.length - 1 ? prev + 1 : prev;
-        if (next !== -1) {
-          const suggestion = suggestions[next];
-          const terms = originalQuery.split(',').map(s => s.trim());
-          const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
-          setQuery(nextVal);
-        }
-        return next;
-      });
+      const next = activeSuggestionIndex < suggestions.length - 1 ? activeSuggestionIndex + 1 : activeSuggestionIndex;
+      setActiveSuggestionIndex(next);
+      if (next !== -1) {
+        const suggestion = suggestions[next];
+        const terms = originalQuery.split(',').map(s => s.trim());
+        const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
+        setQuery(nextVal);
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveSuggestionIndex((prev) => {
-        const next = prev > -1 ? prev - 1 : -1;
-        if (next === -1) {
-          setQuery(originalQuery);
-        } else {
-          const suggestion = suggestions[next];
-          const terms = originalQuery.split(',').map(s => s.trim());
-          const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
-          setQuery(nextVal);
-        }
-        return next;
-      });
+      const next = activeSuggestionIndex > -1 ? activeSuggestionIndex - 1 : -1;
+      setActiveSuggestionIndex(next);
+      if (next === -1) {
+        setQuery(originalQuery);
+      } else {
+        const suggestion = suggestions[next];
+        const terms = originalQuery.split(',').map(s => s.trim());
+        const nextVal = [...terms.slice(0, -1), suggestion.text].join(', ');
+        setQuery(nextVal);
+      }
     } else if (e.key === 'Enter') {
       if (activeSuggestionIndex !== -1) {
         e.preventDefault();
@@ -1321,9 +1317,11 @@ function SearchResultsContent() {
                                    <motion.rect
                                      x="0"
                                      y="0"
+                                     width="400"
                                      height="220"
-                                     initial={{ width: 0 }}
-                                     animate={{ width: 400 }}
+                                     style={{ originX: 0 }}
+                                     initial={{ scaleX: 0 }}
+                                     animate={{ scaleX: 1 }}
                                      transition={{ duration: 1.2, ease: 'easeOut' }}
                                    />
                                  </clipPath>

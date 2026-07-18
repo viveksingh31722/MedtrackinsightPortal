@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import './globals.css';
 
 function NavigationHeader() {
@@ -409,6 +409,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const shouldReduceMotion = useReducedMotion();
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const match = document.cookie.match(/(?:^|; )prefTheme=([^;]*)/);
@@ -426,7 +428,9 @@ export default function RootLayout({
       </head>
       <body>
         <AppProvider>
-          <MainLayout>{children}</MainLayout>
+          <MotionConfig reducedMotion={shouldReduceMotion ? "always" : "user"}>
+            <MainLayout>{children}</MainLayout>
+          </MotionConfig>
         </AppProvider>
       </body>
     </html>

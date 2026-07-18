@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 export interface UserSession {
@@ -61,7 +61,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Custom Fetch Wrapper: Automatically appends JWT, intercepts expired token (401/403),
   // silently refreshes token via /api/auth/refresh, and retries the original request.
-  const apiFetch = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
+  const apiFetch = useCallback(async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     
     const headers = new Headers(options.headers || {});
@@ -75,12 +75,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const fetchOptions: RequestInit = {
       ...options,
       headers,
-      credentials: 'include', // Needed to send refresh cookies
+      credentials: 'include',
     };
 
     let res = await fetch(endpoint, fetchOptions);
 
-    // Auto-refresh logic on token expiry (401/403)
     if (
       (res.status === 401 || res.status === 403) && 
       !endpoint.endsWith('/auth/refresh') && 
@@ -97,7 +96,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           const newAccessToken = refreshData.accessToken;
           localStorage.setItem('accessToken', newAccessToken);
 
-          // Update headers and retry the original request
           headers.set('Authorization', `Bearer ${newAccessToken}`);
           res = await fetch(endpoint, {
             ...options,
@@ -105,7 +103,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             credentials: 'include',
           });
         } else {
-          // Refresh token expired or invalid: teardown session
           localStorage.removeItem('accessToken');
           localStorage.removeItem('cachedUser');
           setUser(null);
@@ -116,38 +113,17 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     return res;
-  };
+  }, [apiBaseUrl]);
 
-  // Load cached user session on mount (Stale-While-Revalidate)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('cachedUser');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setUser(parsed);
-          setLoading(false); // UI renders instantly
-          if (parsed.prefTheme) {
-            syncThemeCookie(parsed.prefTheme);
-          }
-        } catch (e) {
-          console.error('Error parsing cached user:', e);
-        }
-      }
-    }
-    checkSession();
-  }, []);
-
-  const showToast = (message: string, type: 'info' | 'success' | 'warning' | 'danger' = 'info') => {
+  const showToast = useCallback((message: string, type: 'info' | 'success' | 'warning' | 'danger' = 'info') => {
     setToast({ message, show: true, type });
     setTimeout(() => {
       setToast((prev) => (prev ? { ...prev, show: false } : null));
     }, 4000);
-  };
+  }, []);
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
-      // If we don't have a cached user, show loading state
       if (!localStorage.getItem('cachedUser')) {
         setLoading(true);
       }
@@ -176,7 +152,27 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiFetch, apiBaseUrl, router, showToast]);
+
+  // Load cached user session on mount (Stale-While-Revalidate)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('cachedUser');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setUser(parsed);
+          setLoading(false);
+          if (parsed.prefTheme) {
+            syncThemeCookie(parsed.prefTheme);
+          }
+        } catch (e) {
+          console.error('Error parsing cached user:', e);
+        }
+      }
+    }
+    checkSession();
+  }, [checkSession]);
 
   const loginUser = (email: string, accessToken: string, userDetails: any) => {
     localStorage.setItem('accessToken', accessToken);
