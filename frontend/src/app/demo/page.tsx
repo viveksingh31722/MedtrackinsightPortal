@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function DemoPage() {
@@ -12,6 +12,11 @@ export default function DemoPage() {
   const [jobTitle, setJobTitle] = useState('');
   const [requirements, setRequirements] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Reset scroll position to top (Y = 0) on page mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,17 +60,33 @@ export default function DemoPage() {
   };
 
   return (
-    <div className="container" style={{ padding: '60px 24px', maxWidth: '800px' }}>
+    <div className="container" style={{ padding: '36px 24px 60px', maxWidth: '800px' }}>
       
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <span className="hero-subtitle">Enterprise Consultation</span>
-        <h1 style={{ fontSize: '38px', marginTop: '10px' }}>Request a Live Platform Walkthrough</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
+      {/* Prominent High-Contrast Hero Header Card */}
+      <div 
+        className="card hero-card"
+        style={{ 
+          textAlign: 'center', 
+          marginBottom: '24px',
+          padding: '32px 28px',
+          backgroundColor: '#ffffff',
+          border: '1.5px solid var(--border)',
+          borderRadius: '24px',
+          boxShadow: 'var(--shadow-md)',
+          position: 'relative',
+          zIndex: 2
+        }}
+      >
+        <span className="hero-subtitle">⚡ Enterprise Consultation</span>
+        <h1 style={{ fontSize: '34px', fontWeight: 900, marginTop: '8px', marginBottom: '12px', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          Request a Live Platform Walkthrough
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15px', fontWeight: 500, lineHeight: '1.5', margin: '0 auto', maxWidth: '620px' }}>
           Evaluate custom spreadsheet uploads, dedicated server pipelines, and unlimited downloads for your team.
         </p>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ padding: '32px', backgroundColor: '#ffffff', border: '1.5px solid var(--border)', borderRadius: '20px', boxShadow: 'var(--shadow-sm)' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', cursor: loading ? 'wait' : 'default' }}>
           
           <div className="form-split-row">

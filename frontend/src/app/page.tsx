@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from './context/AppContext';
+import ThreeHeroViewport from './components/ThreeHeroViewport';
+import ThreeScrollCanvas from './components/ThreeScrollCanvas';
 
 export default function HomePage() {
   const router = useRouter();
@@ -146,222 +148,203 @@ export default function HomePage() {
   return (
     <div>
       
-      {/* 1. Hero Section & Aggregate Metric Counter */}
-      <section className="hero home-hero" style={{ overflow: 'hidden', padding: '120px 0 80px', borderBottom: 'none' }}>
-        <div className="container" style={{ maxWidth: '960px' }}>
+      {/* 1. Split Hero Section with Dedicated 3D Three.js Viewport */}
+      <section className="hero home-hero" style={{ overflow: 'hidden', padding: '70px 0 60px', borderBottom: '1px solid var(--border)' }}>
+        <div className="container" style={{ maxWidth: '1240px' }}>
           
-          <motion.span 
-            className="hero-subtitle"
-            style={{ 
-              color: '#000000', 
-              background: '#fbe8c3', 
-              border: '1.5px solid #000000',
-              padding: '6px 14px',
-              borderRadius: '999px',
-              fontSize: '11px',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              display: 'inline-block',
-              marginBottom: '24px'
-            }}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            Institutional Bio-Pharma Data Console
-          </motion.span>
-          
-          <motion.h1 
-            className="hero-title"
-            style={{ 
-              fontSize: '48px', 
-              fontWeight: 900, 
-              color: 'var(--text-main)', 
-              lineHeight: '1.1', 
-              maxWidth: '850px', 
-              margin: '0 auto 20px',
-              letterSpacing: '-0.02em',
-              textShadow: 'none'
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', damping: 15, stiffness: 100, delay: 0.15 }}
-          >
-            Global Medicine Intelligence.<br />Cleaned. Compliant. <span style={{ background: 'linear-gradient(135deg, #1c1c1c 20%, #ef4444 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>Enterprise-Ready.</span>
-          </motion.h1>
-          
-          <motion.p 
-            className="hero-description"
-            style={{ 
-              color: 'var(--text-muted)', 
-              maxWidth: '660px', 
-              margin: '0 auto 32px', 
-              fontSize: '16px', 
-              lineHeight: '1.6',
-              fontWeight: 500,
-              textShadow: 'none'
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            Accelerating market entry, supply chain resilience, and investment due diligence with verified, longitudinal global pharmaceutical data.
-          </motion.p>
-
-          <motion.div 
-            style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '48px' }}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-          >
-            <Link href="/demo" className="btn btn-primary" style={{ 
-              backgroundColor: '#f2c044', 
-              color: '#000000', 
-              border: 'none', 
-              padding: '14px 28px', 
-              borderRadius: '999px', 
-              fontWeight: 700, 
-              fontSize: '14px',
-              boxShadow: '0 4px 12px rgba(242, 192, 68, 0.2)'
-            }}>
-              Request Platform Demo
-            </Link>
-            <Link href="/about" className="btn btn-outline" style={{ 
-              backgroundColor: '#ffffff', 
-              color: '#000000', 
-              border: '1.5px solid var(--border)', 
-              padding: '14px 28px', 
-              borderRadius: '999px', 
-              fontWeight: 700, 
-              fontSize: '14px' 
-            }}>
-              View Sourcing Methodology
-            </Link>
-          </motion.div>
-
-          {/* Quick Search Entry Pill */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.4 }}
-            style={{ 
-              maxWidth: '680px', 
-              margin: '0 auto 60px', 
-              backgroundColor: 'rgba(255, 255, 255, 0.75)', 
-              backdropFilter: 'blur(12px)',
-              border: '1.5px solid var(--border)',
-              borderRadius: '999px',
-              padding: '8px 12px 8px 24px',
-              boxShadow: 'var(--shadow-md)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              position: 'relative'
-            }}
-          >
-            <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
-              🔍
-            </span>
-            <form onSubmit={handleQuickSearchSubmit} style={{ display: 'flex', flexGrow: 1, alignItems: 'center' }}>
-              <input
-                type="text"
-                value={quickQuery}
-                onChange={(e) => setQuickQuery(e.target.value)}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Lookup active molecules (e.g. Pembrolizumab, Oncology, Phase III)..."
-                style={{ 
-                  flexGrow: 1, 
-                  height: '44px', 
-                  fontSize: '14px', 
-                  border: 'none', 
-                  background: 'transparent',
-                  outline: 'none',
-                  color: 'var(--text-main)'
-                }}
-              />
-              <button 
-                type="submit" 
-                disabled={searching} 
-                className="btn btn-primary" 
-                style={{ 
-                  height: '44px', 
-                  padding: '0 28px', 
-                  borderRadius: '999px', 
-                  backgroundColor: '#f2c044',
-                  color: '#000000',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  boxShadow: '0 4px 12px rgba(242, 192, 68, 0.15)',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {searching ? 'Querying...' : 'Quick Search'}
-              </button>
-            </form>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(450px, 100%), 1fr))', gap: '40px', alignItems: 'center' }}>
             
-            {showSuggestions && suggestions.length > 0 && (
-              <div 
-                className="autocomplete-dropdown" 
-                onMouseDown={(e) => e.preventDefault()}
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '20px',
-                  right: '20px',
-                  backgroundColor: '#ffffff',
+            {/* Left Column: Value Proposition & Quick Search */}
+            <div style={{ textAlign: 'left' }}>
+              <motion.span 
+                className="hero-subtitle"
+                style={{ 
+                  color: 'var(--primary)', 
+                  background: 'var(--primary-light)', 
+                  border: '1px solid var(--primary)',
+                  padding: '6px 14px',
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'inline-block',
+                  marginBottom: '20px'
+                }}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                Institutional Bio-Pharma Data Console
+              </motion.span>
+              
+              <motion.h1 
+                className="hero-title"
+                style={{ 
+                  fontSize: '44px', 
+                  fontWeight: 900, 
+                  color: 'var(--text-main)', 
+                  lineHeight: '1.15', 
+                  margin: '0 0 16px',
+                  letterSpacing: '-0.02em'
+                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', damping: 15, stiffness: 100, delay: 0.15 }}
+              >
+                Global Medicine Intelligence.<br />Cleaned. Compliant. <span style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>Enterprise-Ready.</span>
+              </motion.h1>
+              
+              <motion.p 
+                className="hero-description"
+                style={{ 
+                  color: 'var(--text-muted)', 
+                  margin: '0 0 28px', 
+                  fontSize: '16px', 
+                  lineHeight: '1.6',
+                  fontWeight: 500
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              >
+                Accelerating market entry, supply chain resilience, and investment due diligence with verified, longitudinal global pharmaceutical data.
+              </motion.p>
+
+              <motion.div 
+                style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '32px' }}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.4 }}
+              >
+                <Link href="/demo" className="btn btn-primary" style={{ padding: '12px 28px' }}>
+                  Request Platform Demo
+                </Link>
+                <Link href="/about" className="btn btn-outline" style={{ padding: '12px 28px' }}>
+                  View Sourcing Methodology
+                </Link>
+              </motion.div>
+
+              {/* Quick Search Entry Pill */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
+                style={{ 
+                  width: '100%', 
+                  backgroundColor: '#ffffff', 
                   border: '1.5px solid var(--border)',
                   borderRadius: '16px',
-                  boxShadow: 'var(--shadow-lg)',
-                  zIndex: 999,
-                  marginTop: '8px',
-                  maxHeight: '260px',
-                  overflowY: 'auto',
-                  textAlign: 'left'
+                  padding: '8px 12px 8px 16px',
+                  boxShadow: 'var(--shadow-md)',
+                  position: 'relative',
+                  marginTop: '12px'
                 }}
               >
-                {suggestions.map((suggestion: any, idx: number) => {
-                  let icon = '💊';
-                  if (suggestion.type === 'disease') icon = '🦠';
-                  else if (suggestion.type === 'country') icon = '🌎';
-                  else if (suggestion.type === 'therapyArea') icon = '🩺';
-                  else if (suggestion.type === 'developmentPhase') icon = '📊';
-                  else if (suggestion.type === 'sponsor') icon = '🏢';
-                  else if (suggestion.type === 'biomarker/moa') icon = '🧬';
-                  else if (suggestion.type === 'product') icon = '🧪';
-                  else if (suggestion.type === 'moleculeType') icon = '🔬';
-                  else if (suggestion.type === 'moleculeClass') icon = '🧬';
-                  else if (suggestion.type === 'marketed') icon = '🛍️';
-                  else if (suggestion.type === 'offPatent') icon = '📅';
+                <form onSubmit={handleQuickSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    🔍
+                  </span>
+                  <input
+                    type="text"
+                    value={quickQuery}
+                    onChange={(e) => setQuickQuery(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Lookup active molecules (e.g. Pembrolizumab, Oncology)..."
+                    style={{ 
+                      flex: '1 1 200px', 
+                      height: '40px', 
+                      fontSize: '14px', 
+                      border: 'none', 
+                      background: 'transparent',
+                      outline: 'none',
+                      color: 'var(--text-main)',
+                      minWidth: '160px'
+                    }}
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={searching} 
+                    className="btn btn-primary" 
+                    style={{ height: '40px', padding: '0 22px', flexShrink: 0, whiteSpace: 'nowrap' }}
+                  >
+                    {searching ? 'Querying...' : 'Quick Search'}
+                  </button>
+                </form>
+                
+                {showSuggestions && suggestions.length > 0 && (
+                  <div 
+                    className="autocomplete-dropdown" 
+                    onMouseDown={(e) => e.preventDefault()}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '10px',
+                      right: '10px',
+                      backgroundColor: '#ffffff',
+                      border: '1.5px solid var(--border)',
+                      borderRadius: '16px',
+                      boxShadow: 'var(--shadow-lg)',
+                      zIndex: 999,
+                      marginTop: '8px',
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {suggestions.map((suggestion: any, idx: number) => {
+                      let icon = '💊';
+                      if (suggestion.type === 'disease') icon = '🦠';
+                      else if (suggestion.type === 'country') icon = '🌎';
+                      else if (suggestion.type === 'therapyArea') icon = '🩺';
+                      else if (suggestion.type === 'developmentPhase') icon = '📊';
+                      else if (suggestion.type === 'sponsor') icon = '🏢';
+                      else if (suggestion.type === 'biomarker/moa') icon = '🧬';
+                      else if (suggestion.type === 'product') icon = '🧪';
+                      else if (suggestion.type === 'moleculeType') icon = '🔬';
+                      else if (suggestion.type === 'moleculeClass') icon = '🧬';
+                      else if (suggestion.type === 'marketed') icon = '🛍️';
+                      else if (suggestion.type === 'offPatent') icon = '📅';
 
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleSelectHomepageSuggestion(suggestion)}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '10px 14px', 
-                        cursor: 'pointer',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-alt)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <span style={{ marginRight: '4px' }}>{icon}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{suggestion.text}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {suggestion.type}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleSelectHomepageSuggestion(suggestion)}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            padding: '10px 14px', 
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-alt)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <span style={{ marginRight: '4px' }}>{icon}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{suggestion.text}</span>
+                          <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {suggestion.type}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Right Column: Dedicated 3D Three.js Interactive Viewport */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.35, duration: 0.6 }}
+            >
+              <ThreeHeroViewport />
+            </motion.div>
+
+          </div>
 
           {/* Scale Metrics Counter Grid */}
           <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginTop: '20px' }}>
@@ -497,10 +480,13 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Three.js Scroll Animation Layer (Mounted strictly after Hero section) */}
+      <ThreeScrollCanvas />
+
       {/* 2. Interactive Data Pipeline Simulator */}
-      <section className="section" style={{ borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <span className="hero-subtitle">DATA INTEGRITY PROVING CENTER</span>
             <h2 style={{ fontSize: '32px', marginTop: '10px' }}>Interactive Data Pipeline Simulator</h2>
             <p style={{ color: 'var(--text-muted)', maxWidth: '640px', margin: '12px auto 0', fontSize: '14px' }}>
@@ -658,9 +644,9 @@ export default function HomePage() {
       </section>
 
       {/* 3. Data Taxonomy & Coverage Preview */}
-      <section className="section" style={{ borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <span className="hero-subtitle">DATA VERTICALS</span>
             <h2 style={{ fontSize: '32px', marginTop: '10px' }}>Data Taxonomy &amp; Coverage Preview</h2>
             <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '12px auto 0', fontSize: '14px' }}>
@@ -767,10 +753,10 @@ export default function HomePage() {
       </section>
 
       {/* 5. Sample Report & Dashboard Teaser */}
-      <section className="section" style={{ borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container" style={{ maxWidth: '800px' }}>
 
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <span className="hero-subtitle">DATA PREVIEW LOCKER</span>
             <h2 style={{ fontSize: '32px', marginTop: '10px' }}>Secure Data Previews</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '8px' }}>

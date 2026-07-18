@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThreeAuthViewport from '../components/ThreeAuthViewport';
 
 const isPasswordValid = (pw: string): boolean => {
   if (pw.length < 10 || pw.length > 14) return false;
@@ -355,63 +356,67 @@ function AuthForm() {
     }
   };
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   return (
-    <div className="auth-split-layout" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', minHeight: 'calc(100vh - 80px)', background: '#C3B6A7' }}>
-      {/* Left branding panel with centered smaller video card */}
-      <div className="auth-sidebar-hero" style={{ backgroundColor: 'transparent', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 60px', borderRight: 'none', order: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2, position: 'relative', width: '100%' }}>
+    <div className="container" style={{ padding: '48px 24px 72px', maxWidth: '1240px' }}>
+      <div 
+        className="auth-split-layout" 
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(420px, 100%), 1fr))', 
+          gap: '72px', 
+          alignItems: 'center' 
+        }}
+      >
+        {/* Left branding panel with seamless 3D DNA helix canvas */}
+        <div 
+          className="auth-sidebar-hero" 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            alignItems: 'flex-start',
+            padding: '16px 0',
+            backgroundColor: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            position: 'relative'
+          }}
+        >
+          <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+            <h1 style={{ fontSize: '34px', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.02em', lineHeight: '1.25' }}>
+              Global Pharmaceutical R&amp;D Intelligence Console
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '15px', fontWeight: 500, lineHeight: '1.6', marginTop: '12px' }}>
+              Access longitudinal clinical trial registries, drug pipeline tracking, and market reference pricing through a secure, high-performance analytical engine.
+            </p>
+          </div>
 
-          {/* Animated M Network Video or Fallback Image styled directly as a card */}
-          {!videoFailed ? (
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              poster="/m_network.png"
-              style={{
-                width: '800px', // Wider format to give more horizontal space
-                height: '500px', // Matches the height of the login card exactly
-                borderRadius: '24px',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                boxShadow: 'var(--shadow-md)',
-                mixBlendMode: 'multiply',
-                filter: 'brightness(1.06) contrast(1.03)',
-                objectFit: 'cover',
-                /* Custom floating animation directly on the media card */
-                animation: 'floatAnimation 6s ease-in-out infinite',
-              }}
-            >
-              <source
-                src="/m_network_antigravity.mp4"
-                type="video/mp4"
-                onError={() => setVideoFailed(true)}
-              />
-            </video>
-          ) : (
-            <img
-              src="/m_network.png"
-              alt="Clinical Trial &amp; Drug Intelligence Network"
-              style={{
-                width: '800px', // Wider format to give more horizontal space
-                height: '500px', // Matches the height of the login card exactly
-                borderRadius: '24px',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                boxShadow: 'var(--shadow-md)',
-                mixBlendMode: 'multiply',
-                filter: 'brightness(1.06) contrast(1.03)',
-                objectFit: 'cover',
-                animation: 'floatAnimation 6s ease-in-out infinite',
-              }}
-            />
-          )}
-
+          {/* Seamless Interactive Three.js 3D Helix Canvas */}
+          <ThreeAuthViewport />
         </div>
-      </div>
 
-      {/* Right Login form console (placed second in JSX, visually ordered on the right) */}
-      <div className="auth-form-container" style={{ backgroundColor: 'transparent', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px', order: 2 }}>
-        <div className="auth-box">
+        {/* Right Login form console with static non-resizing card height */}
+        <div className="auth-form-container" style={{ width: '100%' }}>
+          <div 
+            className="card auth-box" 
+            style={{ 
+              padding: '36px 32px', 
+              backgroundColor: '#ffffff', 
+              border: '1.5px solid var(--border)', 
+              borderRadius: '24px', 
+              boxShadow: 'var(--shadow-md)', 
+              position: 'relative', 
+              zIndex: 2,
+              minHeight: '580px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
 
           {/* 1. Signup verification overlay view */}
           {showSignupOtp ? (
@@ -795,7 +800,8 @@ function AuthForm() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default function LoginPage() {

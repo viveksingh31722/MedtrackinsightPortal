@@ -5,7 +5,48 @@ import { AppProvider, useApp } from './context/AppContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
+import ScrollGradientBackground from './components/ScrollGradientBackground';
+import ThreeScrollCanvas from './components/ThreeScrollCanvas';
 import './globals.css';
+
+const DROPDOWN_TRIGGER_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '4px 8px',
+  borderRadius: '8px',
+  transition: 'background 0.2s',
+};
+
+const AVATAR_BOX_STYLE: React.CSSProperties = {
+  width: '36px',
+  height: '36px',
+  borderRadius: '50%',
+  background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 700,
+  fontSize: '14px',
+  color: '#ffffff',
+  border: '1px solid var(--border)',
+};
+
+const LOGOUT_BTN_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  width: '100%',
+  background: 'none',
+  border: 'none',
+  padding: '10px 16px',
+  fontSize: '13px',
+  color: '#EF4444',
+  cursor: 'pointer',
+  textAlign: 'left'
+};
 
 function NavigationHeader() {
   const { user, logoutUser, loading } = useApp();
@@ -71,41 +112,20 @@ function NavigationHeader() {
           ) : user ? (
             <div style={{ position: 'relative' }}>
               <button
+                type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
-                  transition: 'background 0.2s',
-                }}
+                style={DROPDOWN_TRIGGER_STYLE}
                 className="profile-dropdown-trigger"
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
                     {user.name || user.email.split('@')[0]}
                   </span>
-                  <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '10px', padding: '1px 6px', marginTop: '2px' }}>
+                  <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '12px', padding: '1px 6px', marginTop: '2px' }}>
                     {user.isSubscribed ? 'PRO Account' : 'Free Sandbox'}
                   </span>
                 </div>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  color: '#ffffff',
-                  border: '1px solid var(--border)'
-                }}>
+                <div style={AVATAR_BOX_STYLE}>
                   {(user.name ? user.name.slice(0, 2).toUpperCase() : user.email.slice(0, 2).toUpperCase())}
                 </div>
               </button>
@@ -225,19 +245,9 @@ function NavigationHeader() {
                       <div style={{ height: '1px', backgroundColor: 'var(--border)', margin: '4px 0' }} />
 
                       <button
+                        type="button"
                         onClick={() => { setDropdownOpen(false); logoutUser(); }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          width: '100%',
-                          background: 'none',
-                          border: 'none',
-                          padding: '10px 16px',
-                          fontSize: '13px',
-                          color: '#EF4444',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
+                        style={LOGOUT_BTN_STYLE}
                         className="dropdown-link logout"
                       >
                         <span style={{ marginRight: '8px' }}>🚪</span> Sign Out
@@ -260,7 +270,7 @@ function NavigationHeader() {
         </div>
 
         {/* Mobile menu hamburger toggle */}
-        <button className="mobile-nav-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Navigation Menu">
+        <button type="button" className="mobile-nav-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Navigation Menu">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ width: '24px', height: '24px' }}>
             {mobileMenuOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -333,11 +343,11 @@ function NavigationHeader() {
                         <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
                           {user.email}
                         </span>
-                        <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '10px', padding: '1px 6px', marginTop: '2px', width: 'fit-content' }}>
+                        <span className={`badge ${user.isSubscribed ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '12px', padding: '1px 6px', marginTop: '2px', width: 'fit-content' }}>
                           {user.isSubscribed ? 'PRO Account' : 'Free Sandbox'}
                         </span>
                       </div>
-                      <button onClick={() => { logoutUser(); setMobileMenuOpen(false); }} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
+                      <button type="button" onClick={() => { logoutUser(); setMobileMenuOpen(false); }} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
                         Sign Out
                       </button>
                     </>
@@ -366,44 +376,100 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavigationHeader />
       <main style={{ flexGrow: 1 }}>{children}</main>
-      <footer className="footer">
-        <div className="container footer-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <motion.img
-              src="/logo.jpg"
-              alt="MedTrackInsight Logo"
-              style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }}
-              whileHover={{ scale: 1.1, rotate: 8 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            />
-            <span style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: '22px',
-              background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              MedTrackInsight
-            </span>
+      <footer className="footer" style={{ backgroundColor: '#ffffff', position: 'relative', zIndex: 10, borderTop: '1px solid var(--border)' }}>
+        <div className="container" style={{ maxWidth: '1200px', padding: '36px 24px 20px' }}>
+          
+          {/* 4-Column Enterprise Footer Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '32px',
+            paddingBottom: '24px',
+            borderBottom: '1px solid var(--border)'
+          }}>
+            
+            {/* Column 1: Brand & Tagline */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <motion.img
+                  src="/logo.jpg"
+                  alt="MedTrackInsight Logo"
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }}
+                  whileHover={{ scale: 1.1, rotate: 8 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                />
+                <span style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: '18px',
+                  color: 'var(--text-main)',
+                }}>
+                  MedTrackInsight
+                </span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', fontWeight: 500 }}>
+                Empowering global bio-pharma decision makers with longitudinal clinical trial data, drug pipeline tracking, and MOA intelligence.
+              </p>
+            </div>
+
+            {/* Column 2: Platform Navigation */}
+            <div>
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                Platform Solutions
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Link href="/" className="nav-link" style={{ fontSize: '13px' }}>🔍 Search Dashboard</Link>
+                <Link href="/search" className="nav-link" style={{ fontSize: '13px' }}>💊 Drug Molecule Index</Link>
+                <Link href="/subscription" className="nav-link" style={{ fontSize: '13px' }}>💳 Enterprise Plans</Link>
+                <Link href="/demo" className="nav-link" style={{ fontSize: '13px' }}>⚡ Request Live Demo</Link>
+              </div>
+            </div>
+
+            {/* Column 3: Corporate & Compliance */}
+            <div>
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                Governance & R&D
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Link href="/about" className="nav-link" style={{ fontSize: '13px' }}>📑 Sourcing Methodology</Link>
+                <Link href="/contact" className="nav-link" style={{ fontSize: '13px' }}>✉️ Corporate Contact</Link>
+                <Link href="/refund-policy" className="nav-link" style={{ fontSize: '13px' }}>🛡️ Refund & Terms Policy</Link>
+              </div>
+            </div>
+
+            {/* Column 4: Contact & System Health */}
+            <div>
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                System Status
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }}></span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669' }}>FDA & EMA Data Sync: Active</span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5' }}>
+                Questions or API inquiries? Contact us at <strong style={{ color: 'var(--primary)' }}>support@medtrackinsight.com</strong>
+              </p>
+            </div>
+
           </div>
-          <div className="footer-links">
-            <Link href="/" className="nav-link">Search Dashboard</Link>
-            <Link href="/about" className="nav-link">Corporate R&D</Link>
-            <Link href="/subscription" className="nav-link">Plan Matrix</Link>
-            <Link href="/contact" className="nav-link">Contact Support</Link>
-            <Link href="/refund-policy" className="nav-link">Refund Policy</Link>
-            <Link href="/demo" className="nav-link">Enterprise Demo</Link>
+
+          {/* Bottom Bar: Copyright */}
+          <div style={{ paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: 500 }}>
+              © {new Date().getFullYear()} MedTrackInsight Portal. All clinical trial data verified for high-frequency pharmaceutical research.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-light)' }}>
+              <span>Privacy Compliant</span>
+              <span>•</span>
+              <span>ISO 27001 Certified</span>
+            </div>
           </div>
-          <p className="footer-copyright">
-            © {new Date().getFullYear()} MedTrackInsight Portal. Built for high-frequency clinical research and pipeline optimization.
-          </p>
+
         </div>
       </footer>
     </div>
   );
 }
-
 export default function RootLayout({
   children,
 }: {
@@ -429,6 +495,7 @@ export default function RootLayout({
       <body>
         <AppProvider>
           <MotionConfig reducedMotion={shouldReduceMotion ? "always" : "user"}>
+            <ScrollGradientBackground />
             <MainLayout>{children}</MainLayout>
           </MotionConfig>
         </AppProvider>

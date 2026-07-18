@@ -1,46 +1,94 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 
+const HERO_CARD_STYLE: React.CSSProperties = {
+  textAlign: 'center', 
+  marginBottom: '32px',
+  padding: '36px 28px',
+  backgroundColor: '#ffffff',
+  border: '1.5px solid var(--border)',
+  borderRadius: '24px',
+  boxShadow: 'var(--shadow-md)',
+  position: 'relative',
+  zIndex: 2
+};
+
+const HERO_SUBTITLE_STYLE: React.CSSProperties = {
+  color: 'var(--primary)', 
+  background: 'var(--primary-light)', 
+  border: '1px solid var(--primary)', 
+  padding: '6px 16px',
+  borderRadius: '999px',
+  fontSize: '12px',
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  display: 'inline-block',
+  marginBottom: '14px'
+};
+
 export default function AboutPage() {
+  // Ensure the page always starts at the very top (Y = 0) on navigation
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   return (
-    <div className="container" style={{ padding: '60px 24px' }}>
+    <div className="container" style={{ padding: '36px 24px 60px', maxWidth: '1200px' }}>
       
-      {/* Introduction Banner */}
-      <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <span className="hero-subtitle">Who We Are</span>
-        <h1 style={{ fontSize: '38px', marginTop: '10px', marginBottom: '20px' }}>
+      {/* Prominent High-Contrast Hero Header Card */}
+      <div 
+        className="card hero-card"
+        style={HERO_CARD_STYLE}
+      >
+        <span 
+          className="hero-subtitle" 
+          style={HERO_SUBTITLE_STYLE}
+        >
+          ⚡ Who We Are
+        </span>
+        <h1 style={{ fontSize: '36px', fontWeight: 900, marginTop: '4px', marginBottom: '16px', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
           Empowering Biopharmaceutical R&amp;D Decisions
         </h1>
-        <p style={{ color: 'var(--text-muted)', maxWidth: '720px', margin: '0 auto', fontSize: '16px' }}>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '720px', margin: '0 auto', fontSize: '15px', fontWeight: 500, lineHeight: '1.6' }}>
           MedTrackInsight provides critical researchers, investors, and clinical sponsors with high-resolution benchmarking data, consolidating global pharmaceutical pipelines into a single high-performance query console.
         </p>
       </div>
 
       {/* Corporate Capabilities Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '32px', marginBottom: '60px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '24px', marginBottom: '32px' }}>
         
-        <div className="card">
+        <div 
+          className="card"
+          style={{ padding: '32px', backgroundColor: '#ffffff', border: '1.5px solid var(--border)', borderRadius: '20px', boxShadow: 'var(--shadow-sm)' }}
+        >
           <div style={{ fontSize: '36px', marginBottom: '16px' }}>🔬</div>
-          <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Drug Intelligence</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>Drug Intelligence</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.6' }}>
             Access detailed chemical formulas, CAS registry indices, administration routes, and biological targets for approved molecules and early pipeline candidate profiles.
           </p>
         </div>
 
-        <div className="card">
+        <div 
+          className="card"
+          style={{ padding: '32px', backgroundColor: '#ffffff', border: '1.5px solid var(--border)', borderRadius: '20px', boxShadow: 'var(--shadow-sm)' }}
+        >
           <div style={{ fontSize: '36px', marginBottom: '16px' }}>📊</div>
-          <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Trial Tracking</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>Trial Tracking</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.6' }}>
             Monitor trial completion timelines, recruitment volumes, registry credentials, and primary endpoint variables across 40+ key analytical data dimensions.
           </p>
         </div>
 
-        <div className="card">
+        <div 
+          className="card"
+          style={{ padding: '32px', backgroundColor: '#ffffff', border: '1.5px solid var(--border)', borderRadius: '20px', boxShadow: 'var(--shadow-sm)' }}
+        >
           <div style={{ fontSize: '36px', marginBottom: '16px' }}>📈</div>
-          <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Pipeline Analytics</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>Pipeline Analytics</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.6' }}>
             Compare competitor pipeline phases from Phase I early clinical research to full FDA/EMA marketing approvals and track patent expiration roadmaps.
           </p>
         </div>
@@ -48,49 +96,23 @@ export default function AboutPage() {
       </div>
 
       {/* Informational stats summary card */}
-      <div className="card" style={{ backgroundColor: 'var(--bg-alt)', border: 'none', display: 'flex', flexDirection: 'column', gap: '24px', padding: '40px', marginBottom: '60px' }}>
-        <h2 style={{ fontSize: '28px' }}>Standardized Excel/CSV Catalog Imports</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>
-          Unlike enterprise suites that require complex database migrations and custom tables for new columns, MedTrackInsight features a flexible database layout. Admin files uploaded as Excel or CSV sheets automatically map core fields (Drug Name, Indication, MOA) and dump the remaining columns as schema-agnostic JSON. This keeps database maintenance costs low and supports changes instantly.
+      <div 
+        className="card" 
+        style={{ padding: '36px', textAlign: 'center', backgroundColor: '#ffffff', border: '1.5px solid var(--border)', borderRadius: '20px', boxShadow: 'var(--shadow-sm)' }}
+      >
+        <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>
+          Ready to Explore Global Drug Pipeline Matrices?
+        </h2>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '560px', margin: '0 auto 24px', fontSize: '14px', lineHeight: '1.5' }}>
+          Instantly filter over 14,000+ candidate molecules across global markets with 45 analytical detail columns.
         </p>
-        <div>
-          <Link href="/demo" className="btn btn-primary">
-            Request an Enterprise Trial
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/search" className="btn btn-primary">
+            🔍 Launch Query Console
           </Link>
-        </div>
-      </div>
-
-      {/* Section team summary */}
-      <div className="split-layout" style={{ alignItems: 'center' }}>
-        <div>
-          <h2 style={{ fontSize: '28px', marginBottom: '16px' }}>Accurate Clinical Benchmarks</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '16px', fontSize: '14px' }}>
-            MedTrackInsight sources its data profiles directly from international registers, including ClinicalTrials.gov, EMA Registry, PMDA lists, and verified corporate press briefings.
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-            Our curators standardize mechanism categories, indication definitions, and chemical formulas to ensure search queries filter correctly. Subscribe to our Pro Plan to query the entire database or request a demo to evaluate custom pipelines.
-          </p>
-        </div>
-        <div className="card" style={{ padding: '32px' }}>
-          <h4 style={{ fontSize: '16px', marginBottom: '8px', color: 'var(--primary)' }}>Empirical Stats Summary</h4>
-          <ul style={{ listStyleType: 'none', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px', fontWeight: 600 }}>
-            <li style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>FDA Databases Synced</span>
-              <span style={{ color: 'var(--primary)' }}>Bi-weekly</span>
-            </li>
-            <li style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total Fields Extracted</span>
-              <span style={{ color: 'var(--primary)' }}>45 Attributes</span>
-            </li>
-            <li style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Average Query Speed</span>
-              <span style={{ color: 'var(--primary)' }}>&lt; 35ms</span>
-            </li>
-            <li style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Download Limits Enforced</span>
-              <span style={{ color: 'var(--primary)' }}>2,000 rows/mo</span>
-            </li>
-          </ul>
+          <Link href="/contact" className="btn btn-outline">
+            Contact Research Desk
+          </Link>
         </div>
       </div>
 

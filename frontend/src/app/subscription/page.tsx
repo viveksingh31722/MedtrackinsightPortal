@@ -154,27 +154,69 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="container" style={{ padding: '60px 24px' }}>
+    <div className="container" style={{ padding: '48px 24px 48px', maxWidth: '1200px' }}>
       
-      {/* Title */}
-      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-        <span className="hero-subtitle">Pricing Matrix</span>
-        <h1 style={{ fontSize: '38px', marginTop: '10px' }}>MedTrackInsight Subscription Plans</h1>
-        <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '16px auto 0' }}>
-          Select the data granularity your research requires. All paid memberships include high-speed CSV pipeline exports.
+      {/* Rich Hero Header Section */}
+      <div 
+        className="card hero-card"
+        style={{ 
+          textAlign: 'center', 
+          marginBottom: '24px',
+          padding: '32px 28px',
+          backgroundColor: '#ffffff',
+          border: '1.5px solid var(--border)',
+          borderRadius: '24px',
+          boxShadow: 'var(--shadow-md)',
+          position: 'relative',
+          zIndex: 2
+        }}
+      >
+        <span className="hero-subtitle" style={{ color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid var(--primary)', marginBottom: '6px' }}>
+          ⚡ Institutional Pricing Tiers
+        </span>
+        <h1 style={{ fontSize: '32px', fontWeight: 900, marginTop: '4px', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          Scale Your Bio-Pharma Market Intelligence
+        </h1>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '640px', margin: '4px auto 0', fontSize: '14px', fontWeight: 500, lineHeight: '1.5' }}>
+          Choose the research tier tailored for your clinical data requirements. Instant activation powered by official Razorpay security.
         </p>
+
+        {/* Guarantee Badge Pill */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginTop: '10px',
+          padding: '4px 16px',
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border)',
+          borderRadius: '999px',
+          fontSize: '11px',
+          fontWeight: 700,
+          color: 'var(--text-muted)',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
+          <span>🔒 256-Bit SSL Encryption</span>
+          <span>•</span>
+          <span>⚡ Instant Activation</span>
+          <span>•</span>
+          <span>🛡️ Cancel Anytime</span>
+        </div>
       </div>
 
       {/* Pricing Matrix Tables */}
-      <div className="pricing-matrix">
+      <div className="pricing-matrix" style={{ marginTop: '8px' }}>
         
         {/* Basic Plan */}
-        <div className="pricing-card">
+        <div className="pricing-card" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+            🌱 ENTRY CONSULTANT TIER
+          </div>
           <span className="plan-name">Basic Sandbox</span>
-          <div className="plan-price">
+          <div className="plan-price" style={{ margin: '12px 0 8px' }}>
             ₹499 <span className="plan-period">/ month</span>
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', minHeight: '40px' }}>
             Ideal for independent consultants researching key molecule names and mechanisms.
           </p>
           <div className="plan-features">
@@ -205,12 +247,18 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Pro Plan */}
-        <div className="pricing-card popular">
+        <div className="pricing-card featured" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div className="badge-featured" style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '10px', padding: '4px 10px' }}>
+            BEST VALUE
+          </div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+            ⭐ RECOMMENDED ANALYST TIER
+          </div>
           <span className="plan-name">Pro Researcher</span>
-          <div className="plan-price">
+          <div className="plan-price" style={{ margin: '12px 0 8px' }}>
             ₹1,499 <span className="plan-period">/ month</span>
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', minHeight: '40px' }}>
             Exhaustive molecular specs, patent roadmaps, timeline charts, and standard lists exports.
           </p>
           <div className="plan-features">
@@ -246,12 +294,15 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Enterprise Plan */}
-        <div className="pricing-card">
+        <div className="pricing-card" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+            🏢 CORPORATE INSTITUTIONAL
+          </div>
           <span className="plan-name">Enterprise Premium</span>
-          <div className="plan-price">
+          <div className="plan-price" style={{ margin: '12px 0 8px' }}>
             Custom
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', minHeight: '40px' }}>
             Dedicated database syncs, custom upload templates, API console access, and unlimited downloads.
           </p>
           <div className="plan-features">
