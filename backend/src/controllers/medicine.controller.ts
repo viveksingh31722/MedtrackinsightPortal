@@ -163,70 +163,70 @@ export const searchMedicines = async (req: Request, res: Response) => {
     if (isEsHealthy && esClient && query && query.toString().trim() !== '') {
       try {
         const searchStr = query.toString().trim();
+        const searchTerms = searchStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const shouldQueries: any[] = [];
+
+        searchTerms.forEach(term => {
+          if (isPipelineDataset) {
+            if (field === 'drugName') {
+              shouldQueries.push({ match: { leadDrug: { query: term, fuzziness: 'AUTO' } } });
+            } else if (field === 'indication') {
+              shouldQueries.push({ match: { primaryIndication: { query: term, fuzziness: 'AUTO' } } });
+            } else if (field === 'moa') {
+              shouldQueries.push({ match: { mechanismOfAction: { query: term, fuzziness: 'AUTO' } } });
+            } else {
+              shouldQueries.push({
+                multi_match: {
+                  query: term,
+                  fields: ['leadDrug^4', 'primaryIndication^3', 'mechanismOfAction^2', 'therapeuticArea^2', 'sponsor^2', 'companyName'],
+                  fuzziness: 'AUTO',
+                  operator: 'or'
+                }
+              });
+            }
+          } else {
+            // Forecasting
+            if (field === 'drugName') {
+              shouldQueries.push({
+                multi_match: {
+                  query: term,
+                  fields: ['activeIngredient^3', 'brandName^4'],
+                  fuzziness: 'AUTO'
+                }
+              });
+            } else if (field === 'indication') {
+              shouldQueries.push({
+                multi_match: {
+                  query: term,
+                  fields: ['indicationApproved^3', 'indicationUnderEvaluation^2'],
+                  fuzziness: 'AUTO'
+                }
+              });
+            } else if (field === 'moa') {
+              shouldQueries.push({ match: { moa: { query: term, fuzziness: 'AUTO' } } });
+            } else {
+              shouldQueries.push({
+                multi_match: {
+                  query: term,
+                  fields: ['activeIngredient^3', 'brandName^4', 'indicationApproved^3', 'moa^2', 'therapeuticArea^2', 'applicant^2'],
+                  fuzziness: 'AUTO',
+                  operator: 'or'
+                }
+              });
+            }
+          }
+        });
+
         const queryBody: any = {
           query: {
             bool: {
-              must: []
+              should: shouldQueries,
+              minimum_should_match: 1
             }
           },
           from: skip,
           size: limitNum
         };
-
-        if (isPipelineDataset) {
-          if (field === 'drugName') {
-            queryBody.query.bool.must.push({
-              match: { leadDrug: { query: searchStr, fuzziness: 'AUTO' } }
-            });
-          } else if (field === 'indication') {
-            queryBody.query.bool.must.push({
-              match: { primaryIndication: { query: searchStr, fuzziness: 'AUTO' } }
-            });
-          } else if (field === 'moa') {
-            queryBody.query.bool.must.push({
-              match: { mechanismOfAction: { query: searchStr, fuzziness: 'AUTO' } }
-            });
-          } else {
-            queryBody.query.bool.must.push({
-              multi_match: {
-                query: searchStr,
-                fields: ['leadDrug^3', 'primaryIndication^2', 'mechanismOfAction'],
-                fuzziness: 'AUTO'
-              }
-            });
-          }
-        } else {
-          // Forecasting
-          if (field === 'drugName') {
-            queryBody.query.bool.must.push({
-              multi_match: {
-                query: searchStr,
-                fields: ['activeIngredient^2', 'brandName^3'],
-                fuzziness: 'AUTO'
-              }
-            });
-          } else if (field === 'indication') {
-            queryBody.query.bool.must.push({
-              multi_match: {
-                query: searchStr,
-                fields: ['indicationApproved^2', 'indicationUnderEvaluation'],
-                fuzziness: 'AUTO'
-              }
-            });
-          } else if (field === 'moa') {
-            queryBody.query.bool.must.push({
-              match: { moa: { query: searchStr, fuzziness: 'AUTO' } }
-            });
-          } else {
-            queryBody.query.bool.must.push({
-              multi_match: {
-                query: searchStr,
-                fields: ['activeIngredient^2', 'brandName^3', 'indicationApproved^2', 'moa'],
-                fuzziness: 'AUTO'
-              }
-            });
-          }
-        }
 
         if (hasCountryFilter) {
           queryBody.query.bool.filter = queryBody.query.bool.filter || [];
@@ -291,51 +291,57 @@ export const searchMedicines = async (req: Request, res: Response) => {
       const andClauses: any[] = [];
 
       if (query && query.toString().trim() !== '') {
-        const searchStr = query.toString().trim();
-        
-        if (isPipelineDataset) {
-          if (field === 'drugName') {
-            andClauses.push({ leadDrug: { contains: searchStr, mode: 'insensitive' } });
-          } else if (field === 'indication') {
-            andClauses.push({ primaryIndication: { contains: searchStr, mode: 'insensitive' } });
-          } else if (field === 'moa') {
-            andClauses.push({ mechanismOfAction: { contains: searchStr, mode: 'insensitive' } });
-          } else {
-            andClauses.push({
-              OR: [
+        const fullSearchStr = query.toString().trim();
+        const searchTerms = fullSearchStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const queryOrBranches: any[] = [];
+
+        searchTerms.forEach(searchStr => {
+          if (isPipelineDataset) {
+            if (field === 'drugName') {
+              queryOrBranches.push({ leadDrug: { contains: searchStr, mode: 'insensitive' } });
+            } else if (field === 'indication') {
+              queryOrBranches.push({ primaryIndication: { contains: searchStr, mode: 'insensitive' } });
+            } else if (field === 'moa') {
+              queryOrBranches.push({ mechanismOfAction: { contains: searchStr, mode: 'insensitive' } });
+            } else {
+              queryOrBranches.push(
                 { leadDrug: { contains: searchStr, mode: 'insensitive' } },
                 { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
                 { mechanismOfAction: { contains: searchStr, mode: 'insensitive' } },
-              ]
-            });
-          }
-        } else {
-          if (field === 'drugName') {
-            andClauses.push({
-              OR: [
+                { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+                { developmentPhase: { contains: searchStr, mode: 'insensitive' } },
+                { sponsor: { contains: searchStr, mode: 'insensitive' } },
+                { companyName: { contains: searchStr, mode: 'insensitive' } },
+              );
+            }
+          } else {
+            if (field === 'drugName') {
+              queryOrBranches.push(
                 { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
                 { brandName: { contains: searchStr, mode: 'insensitive' } },
-              ]
-            });
-          } else if (field === 'indication') {
-            andClauses.push({
-              OR: [
+              );
+            } else if (field === 'indication') {
+              queryOrBranches.push(
                 { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
                 { indicationUnderEvaluation: { contains: searchStr, mode: 'insensitive' } },
-              ]
-            });
-          } else if (field === 'moa') {
-            andClauses.push({ moa: { contains: searchStr, mode: 'insensitive' } });
-          } else {
-            andClauses.push({
-              OR: [
+              );
+            } else if (field === 'moa') {
+              queryOrBranches.push({ moa: { contains: searchStr, mode: 'insensitive' } });
+            } else {
+              queryOrBranches.push(
                 { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
                 { brandName: { contains: searchStr, mode: 'insensitive' } },
                 { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
                 { moa: { contains: searchStr, mode: 'insensitive' } },
-              ]
-            });
+                { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+                { applicant: { contains: searchStr, mode: 'insensitive' } },
+              );
+            }
           }
+        });
+
+        if (queryOrBranches.length > 0) {
+          andClauses.push({ OR: queryOrBranches });
         }
       }
 
@@ -692,107 +698,135 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
     return res.status(500).json({ message: 'Error compiling CSV file' });
   }
 };
+const suggestionCache = new Map<string, { timestamp: number; data: any[] }>();
+suggestionCache.clear();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache TTL
 
 export const getSuggestions = async (req: Request, res: Response) => {
   try {
-    res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes browser cache for clinical search summaries
+    res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes browser cache
     const { query, category } = req.query;
-    if (!query || query.toString().trim() === '') {
-      return res.status(200).json({ suggestions: [] });
-    }
-    const searchStr = query.toString().trim();
-    const searchStrLower = searchStr.toLowerCase();
     const cat = category ? category.toString().trim().toLowerCase() : '';
+    const rawQuery = query ? query.toString().trim() : '';
+
+    // Parse comma-separated query: extract last segment as active search term
+    const isTrailingComma = rawQuery.endsWith(',');
+    const queryParts = rawQuery.split(',').map((s: string) => s.trim()).filter(Boolean);
+    const lastPart = (queryParts[queryParts.length - 1] || '').trim();
+    
+    let searchStr = lastPart;
+    // Clear searchStr ONLY if trailing comma or if lastPart is an already-completed term in a multi-term query
+    const isCompletedPrevTerm = queryParts.length > 1 && queryParts.slice(0, -1).includes(lastPart);
+    if (isTrailingComma || isCompletedPrevTerm) {
+      searchStr = '';
+    }
+    const searchStrLower = searchStr.toLowerCase();
+
+    // Check server-side in-memory cache
+    const cacheKey = `${cat}:${searchStrLower}`;
+    const cached = suggestionCache.get(cacheKey);
+    if (process.env.NODE_ENV === 'production' && cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return res.status(200).json({ suggestions: cached.data });
+    }
 
     let suggestions: Array<{ type: string, text: string }> = [];
 
     const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     if (!cat) {
-      // Original default autocomplete behavior
-      // 1. Predefined Country suggestions
       const ALL_COUNTRIES = ['US', 'EU', 'Japan', 'Canada', 'Korea', 'India', 'Aus/NZ'];
-      ALL_COUNTRIES.forEach(c => {
-        if (c.toLowerCase().includes(searchStrLower)) {
-          suggestions.push({ type: 'country', text: c });
-        }
-      });
-      
-      // 2. Predefined Disease suggestions
       const DISEASES = ['Fever', 'Cold/Cough', 'Asthma'];
-      DISEASES.forEach(d => {
-        if (d.toLowerCase().includes(searchStrLower)) {
-          suggestions.push({ type: 'disease', text: d });
-        }
-      });
 
-      // 3. Database Pipeline & Forecasting suggestions
-      const matchedPipeline = await prisma.pipelineProspector.findMany({
-        where: {
-          OR: [
-            { leadDrug: { contains: searchStr, mode: 'insensitive' } },
-            { primaryIndication: { contains: searchStr, mode: 'insensitive' } }
-          ]
-        },
-        take: 20
-      });
+      if (!searchStrLower) {
+        // When no search letter is typed yet, show Diseases first, then Countries
+        DISEASES.forEach(d => suggestions.push({ type: 'disease', text: d }));
+        ALL_COUNTRIES.forEach(c => suggestions.push({ type: 'country', text: c }));
+      } else {
+        // When user starts typing letters (e.g. 'fever', 'cou', 'ast'):
+        // 1. Prioritize matching Diseases first
+        DISEASES.forEach(d => {
+          if (d.toLowerCase().includes(searchStrLower)) {
+            suggestions.push({ type: 'disease', text: d });
+          }
+        });
 
-      const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-        where: {
-          OR: [
-            { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
-            { brandName: { contains: searchStr, mode: 'insensitive' } },
-            { indicationApproved: { contains: searchStr, mode: 'insensitive' } }
-          ]
-        },
-        take: 20
-      });
-      
-      const drugNames = new Set<string>();
-      const otherDiseases = new Set<string>();
-      
-      matchedPipeline.forEach(m => {
-        if (m.leadDrug && m.leadDrug.toLowerCase().includes(searchStrLower)) {
-          drugNames.add(m.leadDrug);
-        }
-        if (m.primaryIndication && m.primaryIndication.toLowerCase().includes(searchStrLower)) {
-          otherDiseases.add(m.primaryIndication);
-        }
-      });
+        // 2. Query database for drugs and indications matching typed letters
+        const matchedPipeline = await prisma.pipelineProspector.findMany({
+          where: {
+            OR: [
+              { leadDrug: { contains: searchStr, mode: 'insensitive' } },
+              { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
+              { therapeuticArea: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          take: 15
+        });
 
-      matchedForecasting.forEach(m => {
-        const name = m.brandName || m.activeIngredient;
-        if (name && name.toLowerCase().includes(searchStrLower)) {
-          drugNames.add(name);
-        }
-        if (m.indicationApproved && m.indicationApproved.toLowerCase().includes(searchStrLower)) {
-          otherDiseases.add(m.indicationApproved);
-        }
-      });
-      
-      drugNames.forEach(name => {
-        suggestions.push({ type: 'medicine', text: name });
-      });
-      
-      otherDiseases.forEach(ind => {
-        if (!DISEASES.some(d => d.toLowerCase() === ind.toLowerCase())) {
-          suggestions.push({ type: 'disease', text: ind });
-        }
-      });
+        const matchedForecasting = await prisma.patentSalesForecasting.findMany({
+          where: {
+            OR: [
+              { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
+              { brandName: { contains: searchStr, mode: 'insensitive' } },
+              { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
+              { therapeuticArea: { contains: searchStr, mode: 'insensitive' } }
+            ]
+          },
+          take: 15
+        });
+        
+        const drugNames = new Set<string>();
+        const otherDiseases = new Set<string>();
+        
+        matchedPipeline.forEach(m => {
+          if (m.leadDrug && m.leadDrug.toLowerCase().includes(searchStrLower)) {
+            drugNames.add(m.leadDrug);
+          }
+          if (m.primaryIndication && m.primaryIndication.toLowerCase().includes(searchStrLower)) {
+            otherDiseases.add(m.primaryIndication);
+          }
+        });
+
+        matchedForecasting.forEach(m => {
+          const name = m.brandName || m.activeIngredient;
+          if (name && name.toLowerCase().includes(searchStrLower)) {
+            drugNames.add(name);
+          }
+          if (m.indicationApproved && m.indicationApproved.toLowerCase().includes(searchStrLower)) {
+            otherDiseases.add(m.indicationApproved);
+          }
+        });
+        
+        drugNames.forEach(name => {
+          suggestions.push({ type: 'medicine', text: name });
+        });
+        
+        otherDiseases.forEach(ind => {
+          if (!DISEASES.some(d => d.toLowerCase() === ind.toLowerCase())) {
+            suggestions.push({ type: 'disease', text: ind });
+          }
+        });
+
+        // 3. Only add Countries matching searchStrLower if any match
+        ALL_COUNTRIES.forEach(c => {
+          if (c.toLowerCase().includes(searchStrLower)) {
+            suggestions.push({ type: 'country', text: c });
+          }
+        });
+      }
     } else {
       // Category specific autocomplete
       if (cat === 'disease') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { primaryIndication: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { primaryIndication: true },
           distinct: ['primaryIndication'],
-          take: 15
+          take: 25
         });
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { indicationApproved: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { indicationApproved: true },
           distinct: ['indicationApproved'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.primaryIndication && results.add(p.primaryIndication));
@@ -800,16 +834,16 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'disease', text }));
       } else if (cat === 'therapy area' || cat === 'therapyarea' || cat === 'therapeuticarea') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { therapeuticArea: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { therapeuticArea: true },
           distinct: ['therapeuticArea'],
-          take: 15
+          take: 25
         });
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { therapeuticArea: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { therapeuticArea: true },
           distinct: ['therapeuticArea'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.therapeuticArea && results.add(p.therapeuticArea));
@@ -817,30 +851,30 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'therapyArea', text }));
       } else if (cat === 'current development phase' || cat === 'developmentphase' || cat === 'phase') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { developmentPhase: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { developmentPhase: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { developmentPhase: true },
           distinct: ['developmentPhase'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.developmentPhase && results.add(p.developmentPhase));
         results.forEach(text => suggestions.push({ type: 'developmentPhase', text }));
       } else if (cat === 'company/ sponsor' || cat === 'company' || cat === 'sponsor') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: {
+          where: searchStr ? {
             OR: [
               { companyName: { contains: searchStr, mode: 'insensitive' } },
               { sponsor: { contains: searchStr, mode: 'insensitive' } }
             ]
-          },
+          } : {},
           select: { companyName: true, sponsor: true },
-          take: 20
+          take: 25
         });
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: { applicant: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { applicant: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { applicant: true },
           distinct: ['applicant'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => {
@@ -851,24 +885,24 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'sponsor', text }));
       } else if (cat === 'biomarker/ moa' || cat === 'moa' || cat === 'biomarker') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: {
+          where: searchStr ? {
             OR: [
               { mechanismOfAction: { contains: searchStr, mode: 'insensitive' } },
               { targetBiomarker: { contains: searchStr, mode: 'insensitive' } }
             ]
-          },
+          } : {},
           select: { mechanismOfAction: true, targetBiomarker: true },
-          take: 20
+          take: 25
         });
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: {
+          where: searchStr ? {
             OR: [
               { moa: { contains: searchStr, mode: 'insensitive' } },
               { biomarker: { contains: searchStr, mode: 'insensitive' } }
             ]
-          },
+          } : {},
           select: { moa: true, biomarker: true },
-          take: 20
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => {
@@ -882,20 +916,20 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'biomarker/moa', text }));
       } else if (cat === 'product/ candidate' || cat === 'product' || cat === 'candidate') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { leadDrug: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { leadDrug: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { leadDrug: true },
           distinct: ['leadDrug'],
-          take: 15
+          take: 25
         });
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: {
+          where: searchStr ? {
             OR: [
               { brandName: { contains: searchStr, mode: 'insensitive' } },
               { activeIngredient: { contains: searchStr, mode: 'insensitive' } }
             ]
-          },
+          } : {},
           select: { brandName: true, activeIngredient: true },
-          take: 20
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.leadDrug && results.add(p.leadDrug));
@@ -906,34 +940,34 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'product', text }));
       } else if (cat === 'type of molecule' || cat === 'moleculetype') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { moleculeType: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { moleculeType: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { moleculeType: true },
           distinct: ['moleculeType'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.moleculeType && results.add(p.moleculeType));
         results.forEach(text => suggestions.push({ type: 'moleculeType', text }));
       } else if (cat === 'biological class' || cat === 'moleculeclass') {
         const matchedPipeline = await prisma.pipelineProspector.findMany({
-          where: { moleculeClass: { contains: searchStr, mode: 'insensitive' } },
+          where: searchStr ? { moleculeClass: { contains: searchStr, mode: 'insensitive' } } : {},
           select: { moleculeClass: true },
           distinct: ['moleculeClass'],
-          take: 15
+          take: 25
         });
         const results = new Set<string>();
         matchedPipeline.forEach(p => p.moleculeClass && results.add(p.moleculeClass));
         results.forEach(text => suggestions.push({ type: 'moleculeClass', text }));
       } else if (cat === 'marketed drugs' || cat === 'marketed') {
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: {
+          where: searchStr ? {
             OR: [
               { brandName: { contains: searchStr, mode: 'insensitive' } },
               { activeIngredient: { contains: searchStr, mode: 'insensitive' } }
             ]
-          },
+          } : {},
           select: { brandName: true, activeIngredient: true },
-          take: 20
+          take: 25
         });
         const results = new Set<string>();
         matchedForecasting.forEach(f => {
@@ -943,7 +977,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
         results.forEach(text => suggestions.push({ type: 'marketed', text }));
       } else if (cat === 'off patent drugs' || cat === 'offpatent') {
         const matchedForecasting = await prisma.patentSalesForecasting.findMany({
-          where: {
+          where: searchStr ? {
             AND: [
               {
                 OR: [
@@ -953,9 +987,9 @@ export const getSuggestions = async (req: Request, res: Response) => {
               },
               { patentExpiryDate: { lt: todayStr } }
             ]
-          },
+          } : { patentExpiryDate: { lt: todayStr } },
           select: { brandName: true, activeIngredient: true },
-          take: 20
+          take: 25
         });
         const results = new Set<string>();
         matchedForecasting.forEach(f => {
@@ -966,14 +1000,17 @@ export const getSuggestions = async (req: Request, res: Response) => {
       }
     }
 
-    // Deduplicate suggestions and cap at 10 items
+    // Deduplicate suggestions and cap at 25 items
     const seen = new Set();
     const uniqueSuggestions = suggestions.filter(s => {
       const key = `${s.type}:${s.text.toLowerCase()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    }).slice(0, 10);
+    }).slice(0, 25);
+
+    // Store in server-side memory cache
+    suggestionCache.set(cacheKey, { timestamp: Date.now(), data: uniqueSuggestions });
 
     return res.status(200).json({ suggestions: uniqueSuggestions });
   } catch (error) {
@@ -1013,23 +1050,32 @@ export const getMedicineAnalysis = async (req: Request, res: Response) => {
     // Build Pipeline filters
     const andPipeline: any[] = [];
     if (query && query.toString().trim() !== '') {
-      const searchStr = query.toString().trim();
-      if (field === 'drugName') {
-        andPipeline.push({ leadDrug: { contains: searchStr, mode: 'insensitive' } });
-      } else if (field === 'indication') {
-        andPipeline.push({ primaryIndication: { contains: searchStr, mode: 'insensitive' } });
-      } else if (field === 'moa') {
-        andPipeline.push({ mechanismOfAction: { contains: searchStr, mode: 'insensitive' } });
-      } else {
-        andPipeline.push({
-          OR: [
+      const fullSearchStr = query.toString().trim();
+      const searchTerms = fullSearchStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+      const pipelineOrBranches: any[] = [];
+
+      searchTerms.forEach(searchStr => {
+        if (field === 'drugName') {
+          pipelineOrBranches.push({ leadDrug: { contains: searchStr, mode: 'insensitive' } });
+        } else if (field === 'indication') {
+          pipelineOrBranches.push({ primaryIndication: { contains: searchStr, mode: 'insensitive' } });
+        } else if (field === 'moa') {
+          pipelineOrBranches.push({ mechanismOfAction: { contains: searchStr, mode: 'insensitive' } });
+        } else {
+          pipelineOrBranches.push(
             { leadDrug: { contains: searchStr, mode: 'insensitive' } },
             { primaryIndication: { contains: searchStr, mode: 'insensitive' } },
             { mechanismOfAction: { contains: searchStr, mode: 'insensitive' } },
             { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
+            { developmentPhase: { contains: searchStr, mode: 'insensitive' } },
             { sponsor: { contains: searchStr, mode: 'insensitive' } },
-          ]
-        });
+            { companyName: { contains: searchStr, mode: 'insensitive' } },
+          );
+        }
+      });
+
+      if (pipelineOrBranches.length > 0) {
+        andPipeline.push({ OR: pipelineOrBranches });
       }
     }
     if (hasCountryFilter) {
@@ -1047,34 +1093,37 @@ export const getMedicineAnalysis = async (req: Request, res: Response) => {
     // Build Forecasting filters
     const andForecasting: any[] = [];
     if (query && query.toString().trim() !== '') {
-      const searchStr = query.toString().trim();
-      if (field === 'drugName') {
-        andForecasting.push({
-          OR: [
+      const fullSearchStr = query.toString().trim();
+      const searchTerms = fullSearchStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+      const forecastingOrBranches: any[] = [];
+
+      searchTerms.forEach(searchStr => {
+        if (field === 'drugName') {
+          forecastingOrBranches.push(
             { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
             { brandName: { contains: searchStr, mode: 'insensitive' } },
-          ]
-        });
-      } else if (field === 'indication') {
-        andForecasting.push({
-          OR: [
+          );
+        } else if (field === 'indication') {
+          forecastingOrBranches.push(
             { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
             { indicationUnderEvaluation: { contains: searchStr, mode: 'insensitive' } },
-          ]
-        });
-      } else if (field === 'moa') {
-        andForecasting.push({ moa: { contains: searchStr, mode: 'insensitive' } });
-      } else {
-        andForecasting.push({
-          OR: [
+          );
+        } else if (field === 'moa') {
+          forecastingOrBranches.push({ moa: { contains: searchStr, mode: 'insensitive' } });
+        } else {
+          forecastingOrBranches.push(
             { activeIngredient: { contains: searchStr, mode: 'insensitive' } },
             { brandName: { contains: searchStr, mode: 'insensitive' } },
             { indicationApproved: { contains: searchStr, mode: 'insensitive' } },
             { moa: { contains: searchStr, mode: 'insensitive' } },
             { therapeuticArea: { contains: searchStr, mode: 'insensitive' } },
             { applicant: { contains: searchStr, mode: 'insensitive' } },
-          ]
-        });
+          );
+        }
+      });
+
+      if (forecastingOrBranches.length > 0) {
+        andForecasting.push({ OR: forecastingOrBranches });
       }
     }
     if (hasCountryFilter) {

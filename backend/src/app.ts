@@ -26,12 +26,6 @@ const morganMiddleware = morgan(
 app.use(morganMiddleware);
 
 
-// Trust proxy for rate limiting (first hop)
-app.set('trust proxy', 1);
-
-// Apply global rate limiting to all requests
-app.use(generalLimiter);
-
 // CORS concept: Cross-Origin Resource Sharing.
 // Since our Next.js frontend runs on localhost:3000 and the Express backend runs on localhost:5000,
 // we must explicitly configure CORS to allow requests from the frontend and support HTTP-only cookie credentials.
@@ -43,6 +37,12 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+// Trust proxy for rate limiting (first hop)
+app.set('trust proxy', 1);
+
+// Apply global rate limiting to all requests
+app.use(generalLimiter);
 
 // Built-in Express parsing middleware
 app.use(express.json()); // Parses application/json body payloads

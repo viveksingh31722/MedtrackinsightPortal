@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,7 @@ export default function HomePage() {
   const [searching, setSearching] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 1. Pipeline Simulator State
   const [inputVolume, setInputVolume] = useState(250000); // 10k to 1m
@@ -102,27 +103,32 @@ export default function HomePage() {
     }, 1200);
   };
 
-  useEffect(() => {
-    if (quickQuery.trim().length < 2) {
+  // Suggestions fetcher with debounce
+  const fetchSuggestionsForQuery = (q: string) => {
+    if (suggestionsDebounceRef.current) clearTimeout(suggestionsDebounceRef.current);
+
+    const trimmed = q.trim();
+    if (trimmed.length < 2) {
       setSuggestions([]);
       return;
     }
 
-    const fetchSuggestions = async () => {
+    suggestionsDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`${apiBaseUrl || 'http://localhost:5000/api'}/medicine/suggestions?query=${encodeURIComponent(quickQuery.trim())}`);
+        const baseUrl = apiBaseUrl || 'http://localhost:5000/api';
+        const res = await fetch(`${baseUrl}/medicine/suggestions?query=${encodeURIComponent(trimmed)}`);
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data.suggestions || []);
+          if ((data.suggestions || []).length > 0) {
+            setShowSuggestions(true);
+          }
         }
       } catch (err) {
         console.error('Error fetching suggestions:', err);
       }
-    };
-
-    const timer = setTimeout(fetchSuggestions, 200);
-    return () => clearTimeout(timer);
-  }, [quickQuery, apiBaseUrl]);
+    }, 200);
+  };
 
   const handleSelectHomepageSuggestion = (suggestion: any) => {
     const text = suggestion.text;
@@ -248,8 +254,17 @@ export default function HomePage() {
                   <input
                     type="text"
                     value={quickQuery}
-                    onChange={(e) => setQuickQuery(e.target.value)}
-                    onFocus={() => setShowSuggestions(true)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQuickQuery(val);
+                      fetchSuggestionsForQuery(val);
+                    }}
+                    onFocus={() => {
+                      setShowSuggestions(true);
+                      if (quickQuery.trim().length >= 2) {
+                        fetchSuggestionsForQuery(quickQuery);
+                      }
+                    }}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     placeholder="Lookup active molecules (e.g. Pembrolizumab, Oncology)..."
                     style={{ 

@@ -87,6 +87,9 @@ function NavigationHeader() {
           <Link href="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
             Home
           </Link>
+          <Link href="/search" className={`nav-link ${isActive('/search') ? 'active' : ''}`}>
+            Search Console
+          </Link>
           <Link href="/about" className={`nav-link ${isActive('/about') ? 'active' : ''}`}>
             About Us
           </Link>
@@ -314,6 +317,9 @@ function NavigationHeader() {
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <Link href="/" className={`nav-link ${isActive('/') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
                     Home
+                  </Link>
+                  <Link href="/search" className={`nav-link ${isActive('/search') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
+                    Search Console
                   </Link>
                   <Link href="/about" className={`nav-link ${isActive('/about') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>
                     About Us

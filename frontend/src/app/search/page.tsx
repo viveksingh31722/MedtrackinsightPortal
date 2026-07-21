@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -120,6 +120,9 @@ function SearchResultsContent() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [originalQuery, setOriginalQuery] = useState(queryParam);
+  // Ref-based debounce and client cache for autocomplete
+  const suggestionsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clientSuggestionCacheRef = useRef<Map<string, any[]>>(new Map());
 
   // API data states
   const [medicines, setMedicines] = useState<any[]>([]);
@@ -165,69 +168,66 @@ function SearchResultsContent() {
   }, [drawerOpen]);
 
   const isSuggestionChecked = (suggestion: any) => {
+    if (!suggestion || !suggestion.text) return false;
     const text = suggestion.text;
-    const type = suggestion.type;
-    if (type === 'country') {
-      return selectedCountries.includes(text);
-    }
-    if (type === 'disease') {
-      return selectedDiseases.includes(text);
-    }
-    if (type === 'sponsor') {
-      return selectedSponsors.includes(text);
-    }
-    if (type === 'developmentPhase' || type === 'therapyArea') {
-      return selectedPhases.includes(text);
-    }
-    // Check if keyword is part of comma-separated string
     const keywords = query.split(',').map((s: string) => s.trim()).filter(Boolean);
-    return keywords.includes(text);
+    if (keywords.some(k => k.toLowerCase() === text.toLowerCase())) {
+      return true;
+    }
+    if (suggestion.type === 'country' && selectedCountries.includes(text)) return true;
+    if (suggestion.type === 'disease' && selectedDiseases.includes(text)) return true;
+    if (suggestion.type === 'sponsor' && selectedSponsors.includes(text)) return true;
+    if ((suggestion.type === 'developmentPhase' || suggestion.type === 'therapyArea') && selectedPhases.includes(text)) return true;
+    return false;
   };
 
   const handleToggleSuggestion = (suggestion: any) => {
     const text = suggestion.text;
-    const type = suggestion.type;
     
     const terms = query.split(',').map((s: string) => s.trim());
-    const lastTerm = terms[terms.length - 1] || '';
+    const nonTerms = terms.filter(Boolean);
+    const lastTerm = (terms[terms.length - 1] || '').trim();
 
-    if (type === 'country') {
-      const next = selectedCountries.includes(text)
-        ? selectedCountries.filter(c => c !== text)
-        : [...selectedCountries, text];
-      setSelectedCountries(next);
-      const nextTerms = terms.slice(0, -1);
-      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-    } else if (type === 'disease') {
-      const next = selectedDiseases.includes(text)
-        ? selectedDiseases.filter(d => d !== text)
-        : [...selectedDiseases, text];
-      setSelectedDiseases(next);
-      const nextTerms = terms.slice(0, -1);
-      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-    } else if (type === 'sponsor') {
-      const next = selectedSponsors.includes(text)
-        ? selectedSponsors.filter(s => s !== text)
-        : [...selectedSponsors, text];
-      setSelectedSponsors(next);
-      const nextTerms = terms.slice(0, -1);
-      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-    } else if (type === 'developmentPhase' || type === 'therapyArea') {
-      const next = selectedPhases.includes(text)
-        ? selectedPhases.filter(p => p !== text)
-        : [...selectedPhases, text];
-      setSelectedPhases(next);
-      const nextTerms = terms.slice(0, -1);
-      setQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
-      setOriginalQuery(nextTerms.join(', ') + (nextTerms.length > 0 ? ', ' : ''));
+    const existingIndex = nonTerms.findIndex(t => t.toLowerCase() === text.toLowerCase());
+
+    let newTerms: string[];
+    let isChecking = false;
+
+    if (existingIndex !== -1) {
+      // Uncheck: remove this value from comma separated query
+      newTerms = nonTerms.filter((_, idx) => idx !== existingIndex);
     } else {
-      const nextTerms = [...terms.slice(0, -1), text];
-      setQuery(nextTerms.join(', '));
-      setOriginalQuery(nextTerms.join(', '));
+      isChecking = true;
+      // Check: replace partial query term if lastTerm is a partial match, otherwise append
+      const isLastTermPartialMatch = 
+        lastTerm !== '' && 
+        lastTerm.toLowerCase() !== text.toLowerCase() &&
+        (
+          text.toLowerCase().includes(lastTerm.toLowerCase()) || 
+          lastTerm.toLowerCase().includes(text.toLowerCase())
+        );
+
+      if (isLastTermPartialMatch) {
+        // Replace the partial last term with full suggestion text
+        newTerms = [...nonTerms.slice(0, -1), text];
+      } else {
+        // Append suggestion text
+        newTerms = [...nonTerms, text];
+      }
     }
+
+    // Format new query string and append trailing comma & space when checking items
+    let newQueryStr = newTerms.join(', ');
+    if (isChecking && newTerms.length > 0) {
+      newQueryStr += ', ';
+    }
+
+    setQuery(newQueryStr);
+    setOriginalQuery(newQueryStr);
+
+    // Keep suggestions open and re-fetch options for updated query & category context
+    setShowSuggestions(true);
+    fetchSuggestions(newQueryStr, selectedCategory);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -301,32 +301,53 @@ function SearchResultsContent() {
     }
   };
 
-  // Autocomplete fetcher
-  useEffect(() => {
-    if (originalQuery.trim() === '') {
-      setSuggestions([]);
+  // Autocomplete fetcher — with client-side caching & ref-based debounce
+  const fetchSuggestions = (q: string, cat: string) => {
+    // Derive the active search term (last comma-segment)
+    const parts = q.split(',').map(s => s.trim());
+    const activeTerm = parts[parts.length - 1] || '';
+
+    const cacheKey = `${cat.toLowerCase()}:${activeTerm.toLowerCase()}`;
+
+    // Instant client-side cache lookup (0ms network cost)
+    if (clientSuggestionCacheRef.current.has(cacheKey)) {
+      const cachedList = clientSuggestionCacheRef.current.get(cacheKey)!;
+      setSuggestions(cachedList);
+      if (cachedList.length > 0) {
+        setShowSuggestions(true);
+      }
       return;
     }
-    
-    const delayDebounceFn = setTimeout(async () => {
+
+    if (suggestionsDebounceRef.current) clearTimeout(suggestionsDebounceRef.current);
+
+    suggestionsDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await apiFetch(`${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(originalQuery)}&category=${encodeURIComponent(selectedCategory)}`);
+        const url = `${apiBaseUrl}/medicine/suggestions?query=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          setSuggestions(data.suggestions || []);
+          const list = data.suggestions || [];
+          clientSuggestionCacheRef.current.set(cacheKey, list);
+          setSuggestions(list);
+          if (list.length > 0) {
+            setShowSuggestions(true);
+          }
         }
       } catch (err) {
         console.error('Suggestions fetch error:', err);
       }
-    }, 200); // 200ms debounce
-    
-    return () => clearTimeout(delayDebounceFn);
-  }, [originalQuery, selectedCategory, apiBaseUrl]);
+    }, 150);
+  };
 
   // Track page parameters when URL changes
   useEffect(() => {
-    setQuery(queryParam);
-    setOriginalQuery(queryParam);
+    let formattedQuery = queryParam;
+    if (formattedQuery.trim() !== '' && !formattedQuery.trim().endsWith(',')) {
+      formattedQuery = formattedQuery.trim() + ', ';
+    }
+    setQuery(formattedQuery);
+    setOriginalQuery(formattedQuery);
     setField(fieldParam);
     setDataset(datasetParam);
     setSelectedCategory(searchParams.get('category') || '');
@@ -432,8 +453,9 @@ function SearchResultsContent() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanQuery = query.trim().replace(/,\s*$/, '');
     const params = new URLSearchParams();
-    if (query.trim() !== '') params.append('query', query.trim());
+    if (cleanQuery !== '') params.append('query', cleanQuery);
     if (field !== 'all') params.append('field', field);
     if (dataset !== '') params.append('dataset', dataset);
     if (selectedCategory !== '') params.append('category', selectedCategory);
@@ -667,9 +689,13 @@ function SearchResultsContent() {
                   setQuery(val);
                   setOriginalQuery(val);
                   setActiveSuggestionIndex(-1);
+                  fetchSuggestions(val, selectedCategory);
                 }}
                 onKeyDown={handleKeyDown}
-                onFocus={() => setShowSuggestions(true)}
+                onFocus={() => {
+                  setShowSuggestions(true);
+                  fetchSuggestions(query, selectedCategory);
+                }}
                 onBlur={() => setTimeout(() => {
                   setShowSuggestions(false);
                   setActiveSuggestionIndex(-1);
@@ -775,7 +801,12 @@ function SearchResultsContent() {
                     key={cat}
                     type="button"
                     onClick={() => {
-                      setSelectedCategory(isActive ? '' : cat);
+                      const nextCat = isActive ? '' : cat;
+                      setSelectedCategory(nextCat);
+                      fetchSuggestions(query, nextCat);
+                      if (nextCat) {
+                        setShowSuggestions(true);
+                      }
                       const params = new URLSearchParams(window.location.search);
                       if (isActive) {
                         params.delete('category');

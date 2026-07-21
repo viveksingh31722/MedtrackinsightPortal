@@ -6,9 +6,13 @@ import rateLimit from 'express-rate-limit';
  */
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Limit each IP to 1000 requests per windowMs for live search & autocomplete
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    const ip = req.ip || req.socket.remoteAddress || '';
+    return process.env.NODE_ENV !== 'production' || ip.includes('127.0.0.1') || ip.includes('::1');
+  },
   message: {
     message: 'Too many requests from this IP, please try again after 15 minutes.'
   }
