@@ -27,7 +27,7 @@ export const generateInvoicePdf = (data: InvoiceData, stream: NodeJS.WritableStr
   const textColor = '#1F2937'; // Slate 800
   const lightTextColor = '#6B7280'; // Slate 500
   const borderColor = '#E5E7EB'; // Slate 200
-  const headerBgColor = '#F9FAFB'; // Slate 50
+  const headerBgColor = '#F9FAFB'; 
 
   // 1. Header Layout
   doc
