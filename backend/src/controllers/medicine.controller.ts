@@ -271,13 +271,13 @@ export const searchMedicines = async (req: Request, res: Response) => {
               where: { id: { in: docIds } }
             });
             const map = new Map(matched.map(m => [m.id, m]));
-            paginated = docIds.map(id => map.get(id)).filter(Boolean);
+            paginated = docIds.map((id: string) => map.get(id)).filter(Boolean);
           } else {
             const matched = await prisma.patentSalesForecasting.findMany({
               where: { id: { in: docIds } }
             });
             const map = new Map(matched.map(m => [m.id, m]));
-            paginated = docIds.map(id => map.get(id)).filter(Boolean);
+            paginated = docIds.map((id: string) => map.get(id)).filter(Boolean);
           }
 
           total = typeof searchResponse.hits.total === 'number'

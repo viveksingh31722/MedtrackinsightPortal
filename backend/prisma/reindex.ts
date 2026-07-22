@@ -1,23 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { Client } from '@elastic/elasticsearch';
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load env variables
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-const ELASTICSEARCH_NODE = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
+import { esClient } from '../src/config/elasticsearch';
 
 const prisma = new PrismaClient();
-const esClient = new Client({
-  node: ELASTICSEARCH_NODE,
-});
 
 async function runReindexing() {
   console.log('🔄 Starting Elasticsearch reindexing process for Pipeline & Forecasting...');
 
   try {
     // 1. Verify ES connectivity
+    if (!esClient) {
+      throw new Error('Elasticsearch client is not initialized. Please check your ELASTICSEARCH_NODE configuration.');
+    }
     const ping = await esClient.ping();
     if (!ping) {
       throw new Error('Could not connect to Elasticsearch cluster.');
