@@ -30,6 +30,9 @@ const createMailTransporter = () => {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false // Bypasses SSL certificate verification errors in Docker
+      }
     });
   }
 
