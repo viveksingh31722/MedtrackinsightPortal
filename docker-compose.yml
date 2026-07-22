@@ -34,6 +34,7 @@ services:
     container_name: medtrackinsight-backend
     restart: always
     environment:
+      - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:Singhvivek321@postgres:5432/medtrackinsight?schema=public&connection_limit=20
       - PORT=5000
       - FRONTEND_URL=http://localhost:3000

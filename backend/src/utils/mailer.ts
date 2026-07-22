@@ -1,17 +1,52 @@
 import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
-import dotenv from 'dotenv';
+import { env } from '../config/env';
 import path from 'path';
 
-// Load environmental parameters immediately at module load time to prevent empty strings
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+const SMTP_HOST = env.SMTP_HOST;
+const SMTP_PORT = env.SMTP_PORT;
+const SMTP_USER = env.SMTP_USER;
+const SMTP_PASS = env.SMTP_PASS;
+const SMTP_FROM = env.SMTP_FROM || `MedTrackInsight <${SMTP_USER || 'noreply@medtrackinsight.com'}>`;
+const SMTP_TO = env.SMTP_TO || 'viveksingh31722@gmail.com';
 
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || `MedTrackInsight <${SMTP_USER || 'noreply@medtrackinsight.com'}>`;
-const SMTP_TO = process.env.SMTP_TO || 'viveksigh31722@gmail.com';
+/**
+ * Creates and configures a nodemailer transporter based on the loaded environment variables.
+ * Respects SMTP_PORT and SMTP_HOST settings if explicitly provided.
+ */
+const createMailTransporter = () => {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    logger.warn('⚠️ SMTP settings are not fully configured. Email sending will be skipped.');
+    return null;
+  }
+
+  // If host and port are explicitly specified, respect them directly
+  if (SMTP_HOST && SMTP_PORT) {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465, // SSL for 465, TLS/STARTTLS (secure: false) for 587 or other ports
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  }
+
+  // Fallback to service 'gmail' if gmail credentials are provided without explicit host/port
+  const isGmail = SMTP_HOST.toLowerCase().includes('gmail') || SMTP_USER.endsWith('@gmail.com');
+  if (isGmail) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  }
+
+  return null;
+};
 
 /**
  * Sends an OTP verification email to the user.
@@ -87,30 +122,9 @@ export const sendOtpEmail = async (
     </div>
   `;
 
-  // Check if SMTP is configured
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+  const transporter = createMailTransporter();
+  if (transporter) {
     try {
-      const isGmail = SMTP_HOST.toLowerCase().includes('gmail') || SMTP_USER.endsWith('@gmail.com');
-      const transporter = nodemailer.createTransport(
-        isGmail
-          ? {
-              service: 'gmail',
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-          : {
-              host: SMTP_HOST,
-              port: SMTP_PORT,
-              secure: SMTP_PORT === 465, // true for 465, false for other ports
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-      );
-
       await transporter.sendMail({
         from: SMTP_FROM,
         to: email,
@@ -124,6 +138,8 @@ export const sendOtpEmail = async (
     } catch (error) {
       logger.error('❌ Failed to dispatch email via SMTP. Falling back to console log...', { error: error });
     }
+  } else {
+    logger.warn(`⚠️ SMTP is not configured. Silently skipping OTP email to ${email}.`);
   }
 
   return true;
@@ -140,29 +156,9 @@ const sendEmailNotification = async (
   text: string,
   html: string
 ): Promise<boolean> => {
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+  const transporter = createMailTransporter();
+  if (transporter) {
     try {
-      const isGmail = SMTP_HOST.toLowerCase().includes('gmail') || SMTP_USER.endsWith('@gmail.com');
-      const transporter = nodemailer.createTransport(
-        isGmail
-          ? {
-              service: 'gmail',
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-          : {
-              host: SMTP_HOST,
-              port: SMTP_PORT,
-              secure: SMTP_PORT === 465,
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-      );
-
       // Send to the admin/configured address
       const toAddress = SMTP_TO;
 
@@ -184,7 +180,7 @@ const sendEmailNotification = async (
       logger.error('❌ Failed to dispatch notification email via SMTP:', { error: error });
     }
   } else {
-    console.warn('⚠️ SMTP settings are not fully configured. Notification email skipped.');
+    logger.warn('⚠️ SMTP settings are not fully configured. Notification email skipped.');
   }
   return false;
 };
@@ -331,29 +327,9 @@ const sendSystemToUserEmail = async (
   text: string,
   html: string
 ): Promise<boolean> => {
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+  const transporter = createMailTransporter();
+  if (transporter) {
     try {
-      const isGmail = SMTP_HOST.toLowerCase().includes('gmail') || SMTP_USER.endsWith('@gmail.com');
-      const transporter = nodemailer.createTransport(
-        isGmail
-          ? {
-              service: 'gmail',
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-          : {
-              host: SMTP_HOST,
-              port: SMTP_PORT,
-              secure: SMTP_PORT === 465,
-              auth: {
-                user: SMTP_USER,
-                pass: SMTP_PASS,
-              },
-            }
-      );
-
       await transporter.sendMail({
         from: SMTP_FROM,
         to: toEmail,
@@ -368,7 +344,7 @@ const sendSystemToUserEmail = async (
       logger.error(`❌ Failed to dispatch system-to-user email to ${toEmail} via SMTP:`, { error: error });
     }
   } else {
-    console.warn('⚠️ SMTP settings are not fully configured. System-to-user email skipped.');
+    logger.warn('⚠️ SMTP settings are not fully configured. System-to-user email skipped.');
   }
   return false;
 };
