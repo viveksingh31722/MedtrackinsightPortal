@@ -1,59 +1,15 @@
-import nodemailer from 'nodemailer';
-import { logger } from '../utils/logger';
+import { Resend } from 'resend';
 import { env } from '../config/env';
+import { logger } from '../utils/logger';
 import path from 'path';
 
-const SMTP_HOST = env.SMTP_HOST;
-const SMTP_PORT = env.SMTP_PORT;
-const SMTP_USER = env.SMTP_USER;
-const SMTP_PASS = env.SMTP_PASS;
-const SMTP_FROM = env.SMTP_FROM || `MedTrackInsight <${SMTP_USER || 'noreply@medtrackinsight.com'}>`;
-const SMTP_TO = env.SMTP_TO || 'viveksingh31722@gmail.com';
-
-/**
- * Creates and configures a nodemailer transporter based on the loaded environment variables.
- * Respects SMTP_PORT and SMTP_HOST settings if explicitly provided.
- */
-const createMailTransporter = () => {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    logger.warn('⚠️ SMTP settings are not fully configured. Email sending will be skipped.');
-    return null;
-  }
-
-  // If host and port are explicitly specified, respect them directly
-  if (SMTP_HOST && SMTP_PORT) {
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465, // SSL for 465, TLS/STARTTLS (secure: false) for 587 or other ports
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false // Bypasses SSL certificate verification errors in Docker
-      }
-    });
-  }
-
-  // Fallback to service 'gmail' if gmail credentials are provided without explicit host/port
-  const isGmail = SMTP_HOST.toLowerCase().includes('gmail') || SMTP_USER.endsWith('@gmail.com');
-  if (isGmail) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
-  }
-
-  return null;
-};
+const resend = new Resend(env.RESEND_API_KEY || 're_placeholder_key');
+const RESEND_FROM = env.RESEND_FROM || 'MedTrackInsight <onboarding@resend.dev>';
+const ADMIN_EMAIL = env.ADMIN_EMAIL || 'admin@medtrack.com';
 
 /**
  * Sends an OTP verification email to the user.
- * Falls back to console logging if SMTP settings are not configured.
+ * Falls back to console logging if Resend is not configured.
  */
 export const sendOtpEmail = async (
   email: string,
@@ -125,67 +81,26 @@ export const sendOtpEmail = async (
     </div>
   `;
 
-  const transporter = createMailTransporter();
-  if (transporter) {
+  if (env.RESEND_API_KEY && env.RESEND_API_KEY !== 're_placeholder_key') {
     try {
-      await transporter.sendMail({
-        from: SMTP_FROM,
+      await resend.emails.send({
+        from: RESEND_FROM,
         to: email,
         subject: subject,
         text: messageText,
         html: htmlContent,
       });
 
-      logger.info(`✉️ Email successfully dispatched via SMTP to ${email}.`);
+      logger.info(`✉️ Email successfully dispatched via Resend to ${email}.`);
       return true;
     } catch (error) {
-      logger.error('❌ Failed to dispatch email via SMTP. Falling back to console log...', { error: error });
+      logger.error('❌ Failed to dispatch email via Resend:', { error: error });
     }
   } else {
-    logger.warn(`⚠️ SMTP is not configured. Silently skipping OTP email to ${email}.`);
+    logger.warn('⚠️ RESEND_API_KEY is not configured. Skipping Resend email dispatch.');
   }
 
   return true;
-};
-
-/**
- * Internal helper to send a formatted SMTP email notification to the administrator,
- * setting the 'from' and 'replyTo' addresses to the user's details.
- */
-const sendEmailNotification = async (
-  userEmail: string,
-  userName: string,
-  subject: string,
-  text: string,
-  html: string
-): Promise<boolean> => {
-  const transporter = createMailTransporter();
-  if (transporter) {
-    try {
-      // Send to the admin/configured address
-      const toAddress = SMTP_TO;
-
-      // Set the 'from' and 'replyTo' dynamically
-      // For Gmail SMTP, if from !== SMTP_USER, Gmail overrides 'from' to SMTP_USER,
-      // but replyTo is fully respected, which is the correct safe fallback.
-      await transporter.sendMail({
-        from: `"${userName} <${userEmail}>" <${SMTP_USER}>`,
-        to: toAddress,
-        replyTo: userEmail,
-        subject: subject,
-        text: text,
-        html: html,
-      });
-
-      logger.info(`✉️ Notification email successfully dispatched via SMTP to ${toAddress}.`);
-      return true;
-    } catch (error) {
-      logger.error('❌ Failed to dispatch notification email via SMTP:', { error: error });
-    }
-  } else {
-    logger.warn('⚠️ SMTP settings are not fully configured. Notification email skipped.');
-  }
-  return false;
 };
 
 /**
@@ -246,7 +161,29 @@ export const sendContactEmail = async (
     </div>
   `;
 
-  return sendEmailNotification(email, name, subject, messageText, htmlContent);
+  if (env.RESEND_API_KEY && env.RESEND_API_KEY !== 're_placeholder_key') {
+    try {
+      const fromEmail = RESEND_FROM.includes('<')
+        ? RESEND_FROM.split('<')[1].replace('>', '').trim()
+        : RESEND_FROM.trim();
+
+      await resend.emails.send({
+        from: `"${name} via MedTrackInsight" <${fromEmail}>`,
+        to: ADMIN_EMAIL,
+        reply_to: email,
+        subject: subject,
+        text: messageText,
+        html: htmlContent,
+      });
+      logger.info(`✉️ Contact submission notification dispatched to admin via Resend.`);
+      return true;
+    } catch (error) {
+      logger.error('❌ Failed to dispatch contact notification email via Resend:', { error: error });
+    }
+  } else {
+    logger.warn('⚠️ Resend is not configured. Skipping Contact Us notification email.');
+  }
+  return false;
 };
 
 /**
@@ -318,36 +255,27 @@ export const sendDemoEmail = async (
     </div>
   `;
 
-  return sendEmailNotification(email, name, subject, messageText, htmlContent);
-};
-
-/**
- * Internal helper to send a formatted SMTP email from the system (MedTrackInsight) to a user/customer.
- */
-const sendSystemToUserEmail = async (
-  toEmail: string,
-  subject: string,
-  text: string,
-  html: string
-): Promise<boolean> => {
-  const transporter = createMailTransporter();
-  if (transporter) {
+  if (env.RESEND_API_KEY && env.RESEND_API_KEY !== 're_placeholder_key') {
     try {
-      await transporter.sendMail({
-        from: SMTP_FROM,
-        to: toEmail,
-        subject: subject,
-        text: text,
-        html: html,
-      });
+      const fromEmail = RESEND_FROM.includes('<')
+        ? RESEND_FROM.split('<')[1].replace('>', '').trim()
+        : RESEND_FROM.trim();
 
-      logger.info(`✉️ System-to-user email successfully dispatched via SMTP to ${toEmail}.`);
+      await resend.emails.send({
+        from: `"${name} at ${company}" <${fromEmail}>`,
+        to: ADMIN_EMAIL,
+        reply_to: email,
+        subject: subject,
+        text: messageText,
+        html: htmlContent,
+      });
+      logger.info(`✉️ Demo booking notification dispatched to admin via Resend.`);
       return true;
     } catch (error) {
-      logger.error(`❌ Failed to dispatch system-to-user email to ${toEmail} via SMTP:`, { error: error });
+      logger.error('❌ Failed to dispatch demo notification email via Resend:', { error: error });
     }
   } else {
-    logger.warn('⚠️ SMTP settings are not fully configured. System-to-user email skipped.');
+    logger.warn('⚠️ Resend is not configured. Skipping Demo request notification email.');
   }
   return false;
 };
@@ -393,7 +321,24 @@ export const sendContactThankYouEmail = async (
     </div>
   `;
 
-  return sendSystemToUserEmail(email, subject, messageText, htmlContent);
+  if (env.RESEND_API_KEY && env.RESEND_API_KEY !== 're_placeholder_key') {
+    try {
+      await resend.emails.send({
+        from: RESEND_FROM,
+        to: email,
+        subject: subject,
+        text: messageText,
+        html: htmlContent,
+      });
+      logger.info(`✉️ Thank-you email successfully dispatched via Resend to ${email}.`);
+      return true;
+    } catch (error) {
+      logger.error(`❌ Failed to dispatch thank-you email to ${email} via Resend:`, { error: error });
+    }
+  } else {
+    logger.warn('⚠️ Resend is not configured. Skipping thank-you email dispatch.');
+  }
+  return false;
 };
 
 /**
@@ -457,7 +402,22 @@ export const sendDemoThankYouEmail = async (
     </div>
   `;
 
-  return sendSystemToUserEmail(email, subject, messageText, htmlContent);
+  if (env.RESEND_API_KEY && env.RESEND_API_KEY !== 're_placeholder_key') {
+    try {
+      await resend.emails.send({
+        from: RESEND_FROM,
+        to: email,
+        subject: subject,
+        text: messageText,
+        html: htmlContent,
+      });
+      logger.info(`✉️ Demo thank-you email successfully dispatched via Resend to ${email}.`);
+      return true;
+    } catch (error) {
+      logger.error(`❌ Failed to dispatch demo thank-you email to ${email} via Resend:`, { error: error });
+    }
+  } else {
+    logger.warn('⚠️ Resend is not configured. Skipping demo thank-you email dispatch.');
+  }
+  return false;
 };
-
-

@@ -29,9 +29,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.11.0",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^9.0.1",
     "pdfkit": "^0.19.1",
     "razorpay": "^2.9.6",
+    "resend": "^3.2.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "^0.18.5"
@@ -45,7 +45,6 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.12.7",
-    "@types/nodemailer": "^8.0.1",
     "@types/pdfkit": "^0.17.6",
     "prisma": "^5.12.1",
     "ts-node": "^10.9.2",

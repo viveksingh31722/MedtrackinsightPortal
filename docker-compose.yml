@@ -45,12 +45,8 @@ services:
       - ELASTICSEARCH_INDEX=medicines
       - RAZORPAY_KEY_ID=rzp_test_TEXpNVt9jnm1yO
       - RAZORPAY_KEY_SECRET=X1bheCerT9T8XYGguQEfY95t
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USER=viveksingh31722@gmail.com
-      - SMTP_PASS=vqtwoevnrzjmjhgn
-      - SMTP_FROM=MedTrackInsight <viveksingh31722@gmail.com>
-      - SMTP_TO=viveksingh31722@gmail.com
+      - RESEND_API_KEY=re_placeholder_key
+      - RESEND_FROM=MedTrackInsight <onboarding@resend.dev>
     ports:
       - "5000:5000"
     depends_on:

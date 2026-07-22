@@ -9,7 +9,7 @@ import {
   verifyRefreshToken,
   TokenPayload,
 } from '../utils/jwt';
-import { sendOtpEmail } from '../utils/mailer';
+import { sendOtpEmail } from '../services/email.service';
 
 // Cookie settings for cross-site security and SSR capability
 const ACCESS_COOKIE_OPTIONS = {

@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import xlsx from 'xlsx';
 import { prisma } from '../config/prisma';
 import { esClient } from '../config/elasticsearch';
-import { sendContactEmail, sendDemoEmail, sendContactThankYouEmail, sendDemoThankYouEmail } from '../utils/mailer';
+import { sendContactEmail, sendDemoEmail, sendContactThankYouEmail, sendDemoThankYouEmail } from '../services/email.service';
 
 // Case-insensitive key retriever for robust spreadsheet parsing
 function getValue(row: any, normalizedKey: string): string | null {

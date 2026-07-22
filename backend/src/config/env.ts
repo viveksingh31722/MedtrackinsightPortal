@@ -32,12 +32,8 @@ export const env = {
   ELASTICSEARCH_NODE: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200',
   ELASTICSEARCH_INDEX: process.env.ELASTICSEARCH_INDEX || 'medicines',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@medtrack.com',
-  SMTP_HOST: getRequiredEnv('SMTP_HOST', 'smtp.gmail.com'),
-  SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
-  SMTP_USER: getRequiredEnv('SMTP_USER', ''),
-  SMTP_PASS: getRequiredEnv('SMTP_PASS', ''),
-  SMTP_FROM: process.env.SMTP_FROM || '',
-  SMTP_TO: process.env.SMTP_TO || '',
+  RESEND_API_KEY: getRequiredEnv('RESEND_API_KEY', 're_placeholder_key'),
+  RESEND_FROM: process.env.RESEND_FROM || 'MedTrackInsight <onboarding@resend.dev>',
 };
 
 // Quick startup verification to make sure required configurations exist
