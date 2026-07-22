@@ -7,6 +7,7 @@ export interface UserSession {
   id: string;
   email: string;
   isSubscribed: boolean;
+  planType?: 'Basic' | 'Premium' | 'Pro' | 'Elite' | 'Starter' | 'Professional' | string;
   downloadCount: number;
   subscriptionEnd?: string;
   isAdmin?: boolean;
@@ -49,7 +50,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   // Express API Base Endpoint URL
-  const apiBaseUrl = 'http://localhost:5000/api';
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
   // Helper to sync theme to cookie (helps prevent visual flashes on SSR layouts)
   const syncThemeCookie = (theme: string) => {

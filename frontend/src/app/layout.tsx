@@ -90,6 +90,9 @@ function NavigationHeader() {
           <Link href="/search" className={`nav-link ${isActive('/search') ? 'active' : ''}`}>
             Search Console
           </Link>
+          <Link href="/features" className={`nav-link ${isActive('/features') ? 'active' : ''}`}>
+            Features
+          </Link>
           <Link href="/about" className={`nav-link ${isActive('/about') ? 'active' : ''}`}>
             About Us
           </Link>
@@ -424,22 +427,25 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                 Platform Solutions
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <Link href="/" className="nav-link" style={{ fontSize: '13px' }}>🔍 Search Dashboard</Link>
-                <Link href="/search" className="nav-link" style={{ fontSize: '13px' }}>💊 Drug Molecule Index</Link>
+                <Link href="/" className="nav-link" style={{ fontSize: '13px' }}>🏠 Home</Link>
+                <Link href="/search" className="nav-link" style={{ fontSize: '13px' }}>🔍 Search Console</Link>
+                <Link href="/features" className="nav-link" style={{ fontSize: '13px' }}>⚡ Platform Features</Link>
                 <Link href="/subscription" className="nav-link" style={{ fontSize: '13px' }}>💳 Enterprise Plans</Link>
                 <Link href="/demo" className="nav-link" style={{ fontSize: '13px' }}>⚡ Request Live Demo</Link>
               </div>
             </div>
 
-            {/* Column 3: Corporate & Compliance */}
+            {/* Column 3: Corporate & Governance */}
             <div>
               <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
-                Governance & R&D
+                Governance & Policies
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <Link href="/about" className="nav-link" style={{ fontSize: '13px' }}>📑 Sourcing Methodology</Link>
+                <Link href="/about" className="nav-link" style={{ fontSize: '13px' }}>ℹ️ About Platform</Link>
                 <Link href="/contact" className="nav-link" style={{ fontSize: '13px' }}>✉️ Corporate Contact</Link>
-                <Link href="/refund-policy" className="nav-link" style={{ fontSize: '13px' }}>🛡️ Refund & Terms Policy</Link>
+                <Link href="/privacy-policy" className="nav-link" style={{ fontSize: '13px' }}>🔒 Privacy Policy</Link>
+                <Link href="/refund-policy" className="nav-link" style={{ fontSize: '13px' }}>🛡️ Refund Policy</Link>
+                <Link href="/cancellation-policy" className="nav-link" style={{ fontSize: '13px' }}>📜 Cancellation Policy</Link>
               </div>
             </div>
 

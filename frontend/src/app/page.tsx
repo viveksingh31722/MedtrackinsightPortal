@@ -155,7 +155,7 @@ export default function HomePage() {
     <div>
       
       {/* 1. Split Hero Section with Dedicated 3D Three.js Viewport */}
-      <section className="hero home-hero" style={{ overflow: 'hidden', padding: '70px 0 60px', borderBottom: '1px solid var(--border)' }}>
+      <section className="hero home-hero" style={{ overflow: 'hidden', padding: '40px 0' }}>
         <div className="container" style={{ maxWidth: '1240px' }}>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(450px, 100%), 1fr))', gap: '40px', alignItems: 'center' }}>
@@ -362,7 +362,7 @@ export default function HomePage() {
           </div>
 
           {/* Scale Metrics Counter Grid */}
-          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginTop: '20px' }}>
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginTop: '12px' }}>
             <motion.div 
               className="card"
               style={{ 
@@ -498,8 +498,150 @@ export default function HomePage() {
       {/* Three.js Scroll Animation Layer (Mounted strictly after Hero section) */}
       <ThreeScrollCanvas />
 
-      {/* 2. Interactive Data Pipeline Simulator */}
-      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
+      {/* 2. Therapeutic Areas Showcase Section (21 Therapeutic Areas Covered) */}
+      <section className="section" style={{ padding: '40px 0', position: 'relative', zIndex: 2 }}>
+        <div className="container" style={{ maxWidth: '1240px' }}>
+          <div 
+            className="card" 
+            style={{ 
+              padding: '32px 24px', 
+              backgroundColor: '#ffffff', 
+              border: '1.5px solid var(--border)', 
+              borderRadius: '24px', 
+              boxShadow: 'var(--shadow-md)' 
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <span className="hero-subtitle" style={{ color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid var(--primary)', padding: '6px 16px', borderRadius: '999px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+                🩺 Comprehensive Clinical Coverage
+              </span>
+              <h2 style={{ fontSize: '32px', fontWeight: 900, marginTop: '8px', color: 'var(--text-main)' }}>
+                21 Therapeutic Areas Covered
+              </h2>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '750px', margin: '8px auto 0', fontSize: '14px', fontWeight: 500, lineHeight: '1.6' }}>
+                Our pipeline intelligence database tracks active drug programs, clinical trials, and regulatory milestones across 21 core therapeutic domains. Click any area to query data console:
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', maxWidth: '1150px', margin: '0 auto' }}>
+              {[
+                'Oncology', 'Hematology', 'Neurology', 'Cardiology', 
+                'Endocrinology', 'Diabetes', 'Rare Diseases', 'Immunology', 
+                'Autoimmune Disorders', 'Infectious Diseases', 'Vaccines', 
+                'Respiratory Diseases', 'Gastroenterology', 'Dermatology', 
+                'Ophthalmology', 'Nephrology', "Women's Health", "Men's Health", 
+                'CNS Disorders', 'Gene Therapy', 'Cell Therapy'
+              ].map((ta, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => router.push(`/search?query=${encodeURIComponent(ta)}&field=all`)}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '999px',
+                    border: '1.5px solid #0284c7',
+                    backgroundColor: '#ffffff',
+                    color: '#0f172a',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
+                    transition: 'all 0.2s ease-in-out',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  className="category-pill"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e0f2fe';
+                    e.currentTarget.style.borderColor = '#0369a1';
+                    e.currentTarget.style.color = '#0369a1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.borderColor = '#0284c7';
+                    e.currentTarget.style.color = '#0f172a';
+                  }}
+                >
+                  <span>🧪</span>
+                  <span>{ta}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Why Choose Our Platform Section (6 Value Pillars) */}
+      <section className="section" style={{ padding: '36px 0', borderBottom: '1px solid var(--border)' }}>
+        <div className="container" style={{ maxWidth: '1240px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+            <span className="hero-subtitle" style={{ color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid var(--primary)', padding: '6px 16px', borderRadius: '999px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+              ⭐ Platform Value Advantage
+            </span>
+            <h2 style={{ fontSize: '32px', fontWeight: 900, marginTop: '8px', color: 'var(--text-main)' }}>
+              Why Choose Our Platform
+            </h2>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '640px', margin: '8px auto 0', fontSize: '14px', fontWeight: 500 }}>
+              Engineered to support critical decision workflows for researchers, business development, investors, and commercial teams.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '24px' }}>
+            {[
+              {
+                title: 'Comprehensive Coverage',
+                icon: '🌐',
+                desc: 'Thousands of pipeline assets from global pharmaceutical and biotechnology companies consolidated into one searchable database.'
+              },
+              {
+                title: 'Structured Data',
+                icon: '📊',
+                desc: 'Standardized and organized information for efficient cross-trial analysis, pipeline comparisons, and instant exports.'
+              },
+              {
+                title: 'Advanced Filtering',
+                icon: '⚡',
+                desc: 'Quickly identify high-value opportunities using multi-parameter search across 70+ granular data dimensions.'
+              },
+              {
+                title: 'Competitive Intelligence',
+                icon: '📡',
+                desc: 'Monitor competitor activities, pipeline progress, and trial phase advancements in real time across global regions.'
+              },
+              {
+                title: 'Business Development Support',
+                icon: '🤝',
+                desc: 'Identify licensing opportunities, emerging technology platforms, co-development assets, and potential strategic partners.'
+              },
+              {
+                title: 'Market Insights',
+                icon: '📈',
+                desc: 'Understand macro trends across therapeutic areas, development stages, regulatory milestones, and patent expiry roadmaps.'
+              }
+            ].map((pillar, pIdx) => (
+              <div 
+                key={pIdx}
+                className="card"
+                style={{
+                  padding: '28px',
+                  backgroundColor: '#ffffff',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '20px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <div style={{ fontSize: '32px', marginBottom: '14px' }}>{pillar.icon}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>{pillar.title}</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>{pillar.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Interactive Data Pipeline Simulator */}
+      <section className="section" style={{ padding: '36px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <span className="hero-subtitle">DATA INTEGRITY PROVING CENTER</span>
@@ -659,7 +801,7 @@ export default function HomePage() {
       </section>
 
       {/* 3. Data Taxonomy & Coverage Preview */}
-      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '36px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <span className="hero-subtitle">DATA VERTICALS</span>
@@ -669,7 +811,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '24px' }}>
 
             {/* Column 1 */}
             <div className="card" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
@@ -718,7 +860,7 @@ export default function HomePage() {
       </section>
 
       {/* 4. Target Audience Use Cases */}
-      <section className="section" style={{ borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '36px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '50px' }}>
             <span className="hero-subtitle">USE CASES &amp; BUYER BENEFITS</span>
@@ -731,7 +873,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             {/* Case 1 */}
-            <div className="card" style={{ padding: '32px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'center' }}>
+            <div className="card usecase-card">
               <div>
                 <span className="badge-outline">For Pharma Firms</span>
                 <h3 style={{ fontSize: '20px', marginTop: '12px' }}>Portfolio Strategy &amp; Launch Price Optimization</h3>
@@ -742,7 +884,7 @@ export default function HomePage() {
             </div>
 
             {/* Case 2 */}
-            <div className="card" style={{ padding: '32px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'center' }}>
+            <div className="card usecase-card">
               <div>
                 <span className="badge-outline">For Finance &amp; Hedge Funds</span>
                 <h3 style={{ fontSize: '20px', marginTop: '12px' }}>Healthcare Equities &amp; Asset Diligence</h3>
@@ -753,7 +895,7 @@ export default function HomePage() {
             </div>
 
             {/* Case 3 */}
-            <div className="card" style={{ padding: '32px', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'center' }}>
+            <div className="card usecase-card">
               <div>
                 <span className="badge-outline">For Consulting Networks</span>
                 <h3 style={{ fontSize: '20px', marginTop: '12px' }}>Accelerated Client Engagement Delivery</h3>
@@ -768,7 +910,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. Sample Report & Dashboard Teaser */}
-      <section className="section" style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
+      <section className="section" style={{ padding: '36px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container" style={{ maxWidth: '800px' }}>
 
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -789,7 +931,7 @@ export default function HomePage() {
                   <span style={{ fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Target Dataset Structure</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '16px' }}>
                   <div
                     onClick={() => setDownloadFormat('xlsx')}
                     style={{

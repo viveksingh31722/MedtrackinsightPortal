@@ -265,6 +265,7 @@ export const getMe = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         isSubscribed: user.isSubscribed,
+        planType: user.planType || 'Basic',
         downloadCount: user.downloadCount,
         subscriptionEnd: user.subscriptionEnd,
         isAdmin,

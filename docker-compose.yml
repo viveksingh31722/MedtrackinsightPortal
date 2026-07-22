@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: medtrackinsight-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Singhvivek321
+      POSTGRES_DB: medtrackinsight
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: medtrackinsight-es
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medtrackinsight-backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:Singhvivek321@postgres:5432/medtrackinsight?schema=public&connection_limit=20
+      - PORT=5000
+      - FRONTEND_URL=http://localhost:3000
+      - ADMIN_EMAIL=admin@medtrack.com
+      - JWT_ACCESS_SECRET=medtrack_access_token_secret_key_12345!
+      - JWT_REFRESH_SECRET=medtrack_refresh_token_secret_key_67890!
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=medicines
+      - RAZORPAY_KEY_ID=rzp_test_TEXpNVt9jnm1yO
+      - RAZORPAY_KEY_SECRET=X1bheCerT9T8XYGguQEfY95t
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=viveksingh31722@gmail.com
+      - SMTP_PASS=vqtwoevnrzjmjhgn
+      - SMTP_FROM=MedTrackInsight <viveksingh31722@gmail.com>
+      - SMTP_TO=viveksingh31722@gmail.com
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - elasticsearch
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_TBLrLOsxDIOCqb
+    container_name: medtrackinsight-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  es_data:

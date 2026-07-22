@@ -26,10 +26,14 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
         return res.status(400).json({ message: 'Amount must be at least 100 paise' });
       }
     } else {
-      const { planType } = req.body; // e.g., 'Pro' ($1,499) or 'Basic' ($499)
-      amount = 149900; // Default: Pro Plan in Paise (Rs 1,499.00)
-      if (planType === 'Basic') {
-        amount = 49900; // Basic Plan in Paise (Rs 499.00)
+      const { planType, billingCycle } = req.body;
+      const isMonthly = billingCycle === 'monthly';
+      if (planType === 'Starter') {
+        amount = isMonthly ? 199900 : 1499900; // ₹1,999 vs ₹14,999
+      } else if (planType === 'Professional') {
+        amount = isMonthly ? 199900 : 2499900; // ₹1,999 vs ₹24,999
+      } else {
+        amount = 1499900; // Default fallback Starter Annual
       }
     }
 
@@ -132,13 +136,22 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     // Upgrade the user in PostgreSQL
+    const planType = req.body.planType || 'Starter';
+    const billingCycle = req.body.billingCycle || 'annual';
+
+    // Calculate subscription end date based on billing cycle (1 month vs 12 months)
     const subscriptionEnd = new Date();
-    subscriptionEnd.setDate(subscriptionEnd.getDate() + 30); // 30-day billing cycle
+    if (billingCycle === 'monthly') {
+      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+    } else {
+      subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: req.user.userId },
       data: {
         isSubscribed: true,
+        planType,
         subscriptionEnd,
         downloadCount: 0, // Reset download quotas upon purchase
       },
@@ -171,9 +184,14 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response) =>
     const sequenceNum = String(nextSeq).padStart(4, '0');
     const invoiceNumber = `MTI-${year}-${month}-${sequenceNum}`;
 
-    const planType = req.body.planType || 'Pro';
-    const amountVal = req.body.amount ? req.body.amount / 100 : (planType === 'Basic' ? 499.0 : 1499.0);
-    const planName = planType === 'Basic' ? 'Basic Sandbox Plan' : 'Pro Research Plan';
+    let amountVal = planType === 'Professional'
+      ? (billingCycle === 'monthly' ? 1999 : 24999)
+      : (billingCycle === 'monthly' ? 1999 : 14999);
+    if (req.body.amount) amountVal = req.body.amount / 100;
+
+    const planName = planType === 'Professional'
+      ? `Professional Plan (${billingCycle === 'monthly' ? 'Monthly' : '1 Year'} - 3 Licenses)`
+      : `Starter Plan (${billingCycle === 'monthly' ? 'Monthly' : '1 Year'} - 1 License)`;
 
     await prisma.invoice.create({
       data: {
@@ -194,6 +212,7 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response) =>
         id: updatedUser.id,
         email: updatedUser.email,
         isSubscribed: updatedUser.isSubscribed,
+        planType: updatedUser.planType,
         subscriptionEnd: updatedUser.subscriptionEnd,
       },
     });

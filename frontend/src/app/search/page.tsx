@@ -342,6 +342,17 @@ function SearchResultsContent() {
 
   // Track page parameters when URL changes
   useEffect(() => {
+    if (!queryParam.trim()) {
+      setQuery('');
+      setOriginalQuery('');
+      setMedicines([]);
+      setAnalysisData(null);
+      setLoading(false);
+      setAnalysisLoading(false);
+      setMeta({ total: 0, page: 1, limit: 15, totalPages: 1, isSubscribed: user?.isSubscribed || false });
+      return;
+    }
+
     let formattedQuery = queryParam;
     if (formattedQuery.trim() !== '' && !formattedQuery.trim().endsWith(',')) {
       formattedQuery = formattedQuery.trim() + ', ';
@@ -465,6 +476,13 @@ function SearchResultsContent() {
   };
 
   const handleCountryToggle = (country: string) => {
+    // Basic plan restriction: US Only
+    if (country !== 'US' && user?.isSubscribed && user?.planType === 'Basic') {
+      showToast('Basic Plan includes US Only data. Upgrade to Premium for Global Multi-Region country access!', 'warning');
+      router.push('/subscription');
+      return;
+    }
+
     const nextCountries = selectedCountries.includes(country)
       ? selectedCountries.filter(c => c !== country)
       : [...selectedCountries, country];
@@ -477,6 +495,12 @@ function SearchResultsContent() {
   };
 
   const handleSelectAllCountries = () => {
+    if (user?.isSubscribed && user?.planType === 'Basic') {
+      showToast('Basic Plan includes US Only data. Upgrade to Premium for Global Multi-Region country access!', 'warning');
+      router.push('/subscription');
+      return;
+    }
+
     setSelectedCountries(ALL_COUNTRIES);
     const params = new URLSearchParams(window.location.search);
     params.set('countries', ALL_COUNTRIES.join(','));
@@ -600,14 +624,15 @@ function SearchResultsContent() {
       return;
     }
 
-    if (user.downloadCount >= 2000) {
-      showToast('Export quota exceeded. Limit: 2,000 rows', 'danger');
+    const limit = user.planType === 'Professional' ? 1000 : 500;
+    if (user.downloadCount >= limit) {
+      showToast(`Export quota exceeded. Limit: ${limit.toLocaleString()} rows`, 'danger');
       return;
     }
 
-    // Warn if they are approaching the 2000 quota
-    if (user.downloadCount > 1800) {
-      showToast(`Warning: You have consumed ${user.downloadCount} of your 2,000 row quota`, 'warning');
+    // Warn if they are approaching the quota limit
+    if (user.downloadCount > limit * 0.9) {
+      showToast(`Warning: You have consumed ${user.downloadCount} of your ${limit.toLocaleString()} row quota`, 'warning');
     }
 
     try {
@@ -796,12 +821,32 @@ function SearchResultsContent() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {CATEGORIES.map((cat) => {
                 const isActive = selectedCategory === cat;
+                const isLockedForUser = 
+                  !user?.isSubscribed && 
+                  (cat === 'Off Patent Drugs' || cat === 'Therapy Area' || cat === 'Marketed Drugs');
+
                 return (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => {
                       const nextCat = isActive ? '' : cat;
+
+                      // Enforce Plan Tier Module Restrictions
+                      const hasFullAccess = !!user?.isSubscribed;
+
+                      if (nextCat === 'Off Patent Drugs' && !hasFullAccess) {
+                        showToast('Off-Patent Data Module (LOE & Expiries) requires an active subscription.', 'warning');
+                        router.push('/subscription');
+                        return;
+                      }
+
+                      if ((nextCat === 'Therapy Area' || nextCat === 'Marketed Drugs') && !hasFullAccess) {
+                        showToast(`${nextCat} requires an active subscription.`, 'warning');
+                        router.push('/subscription');
+                        return;
+                      }
+
                       setSelectedCategory(nextCat);
                       fetchSuggestions(query, nextCat);
                       if (nextCat) {
@@ -818,16 +863,20 @@ function SearchResultsContent() {
                     style={{
                       padding: '6px 14px',
                       borderRadius: '9999px',
-                      border: `1.5px solid ${isActive ? '#ff7a00' : 'var(--border)'}`,
-                      backgroundColor: isActive ? '#ff7a00' : '#111111',
-                      color: '#ffffff',
+                      border: `1.5px solid ${isActive ? '#ff7a00' : isLockedForUser ? '#F59E0B' : 'var(--border)'}`,
+                      backgroundColor: isActive ? '#ff7a00' : isLockedForUser ? 'rgba(245, 158, 11, 0.15)' : '#111111',
+                      color: isLockedForUser && !isActive ? '#F59E0B' : '#ffffff',
                       fontSize: '11px',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease-in-out',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                     className={`category-pill ${isActive ? 'active' : ''}`}
                   >
+                    {isLockedForUser && <span>🔒</span>}
                     {cat}
                   </button>
                 );
@@ -927,9 +976,20 @@ function SearchResultsContent() {
 
         {/* Main Grid View */}
         <section className="grid-container">
-          
-          {/* Analysis Dashboard Section */}
-          <div className="analysis-section">
+          {!queryParam.trim() ? (
+            <div className="card" style={{ padding: '80px 24px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', border: '1.5px solid var(--border)', borderRadius: '24px', boxShadow: 'var(--shadow-md)', width: '100%' }}>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px' }}>
+                Search MedTrackInsight Database
+              </h2>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '580px', margin: '0 auto 24px', fontSize: '15px', lineHeight: '1.6' }}>
+                Enter active drug keywords, diseases, countries, or sponsors in the search box above to retrieve pharmaceutical pipeline tracking and clinical trial analytics.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Analysis Dashboard Section */}
+              <div className="analysis-section">
             <h3 className="analysis-title">
               📊 Basic Summary - {queryParam || 'All Records'}
             </h3>
@@ -1236,15 +1296,14 @@ function SearchResultsContent() {
                                  <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
                                    {d.phase.length > 15 ? d.phase.substring(0, 12) + '...' : d.phase}
                                  </text>
-                                 <motion.rect
+                                 <motion.rect width={barWidth}
                                    x="140"
                                    y={y}
                                    height="14"
                                    rx="4"
                                    fill="#3c7cb5"
                                    style={{ originX: 0 }}
-                                   initial={{ width: 0 }}
-                                   animate={{ width: barWidth }}
+                                   initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
                                    whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
                                    transition={{ duration: 0.15 }}
                                  />
@@ -1285,15 +1344,14 @@ function SearchResultsContent() {
                                  <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
                                    {d.sponsor.length > 18 ? d.sponsor.substring(0, 15) + '...' : d.sponsor}
                                  </text>
-                                 <motion.rect
+                                 <motion.rect width={barWidth}
                                    x="140"
                                    y={y}
                                    height="14"
                                    rx="4"
                                    fill="#3c7cb5"
                                    style={{ originX: 0 }}
-                                   initial={{ width: 0 }}
-                                   animate={{ width: barWidth }}
+                                   initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
                                    whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
                                    transition={{ duration: 0.15 }}
                                  />
@@ -1422,8 +1480,7 @@ function SearchResultsContent() {
                                    rx="4"
                                    fill="#3c7cb5"
                                    style={{ originX: 0 }}
-                                   initial={{ width: 0 }}
-                                   animate={{ width: barWidth }}
+                                   initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
                                    whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
                                    transition={{ duration: 0.15 }}
                                  />
@@ -1554,15 +1611,14 @@ function SearchResultsContent() {
                                  <text x="10" y={y + 11} fill="var(--text-main)" fontSize="12" fontWeight="700">
                                    {d.therapeuticArea.length > 15 ? d.therapeuticArea.substring(0, 12) + '...' : d.therapeuticArea}
                                  </text>
-                                 <motion.rect
+                                 <motion.rect width={barWidth}
                                    x="140"
                                    y={y}
                                    height="14"
                                    rx="4"
                                    fill="#3c7cb5"
                                    style={{ originX: 0 }}
-                                   initial={{ width: 0 }}
-                                   animate={{ width: barWidth }}
+                                   initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
                                    whileHover={{ fill: '#ff7a00', filter: 'brightness(1.15)' }}
                                    transition={{ duration: 0.15 }}
                                  />
@@ -1857,6 +1913,8 @@ function SearchResultsContent() {
               display: flex;
               flex-direction: column;
               transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+              min-width: 0;
+              overflow: hidden;
             }
             .chart-container:hover {
               transform: translateY(-5px) scale(1.015);
@@ -2123,10 +2181,10 @@ function SearchResultsContent() {
                 Showing 4 Standard Columns. Subscribe to unlock remaining 41 columns.
               </h4>
               <p className="paywall-description">
-                Unlock clinical trial identifiers, molecular structure specs, chemical weights, sponsor timeline charts, safety margins, patent limits, and enable batch Excel/CSV exports up to 2,000 rows.
+                Unlock clinical trial identifiers, molecular structure specs, chemical weights, sponsor timeline charts, safety margins, patent limits, and enable batch Excel/CSV exports up to 1,000 rows.
               </p>
               <button onClick={() => router.push('/subscription')} className="btn btn-primary btn-sm">
-                Upgrade to Pro Plan ($1499)
+                View Subscription Plans (from ₹1,999)
               </button>
             </div>
           )}
@@ -2152,6 +2210,8 @@ function SearchResultsContent() {
                 &rarr;
               </button>
             </div>
+          )}
+            </>
           )}
         </section>
       </div>
@@ -2318,7 +2378,7 @@ function SearchResultsContent() {
                   {/* Quota details warning if Pro */}
                   {user && (
                     <div className="alert alert-success" style={{ fontSize: '12px', padding: '10px' }}>
-                      📊 <strong>Quota Monitor:</strong> You have exported <strong>{user.downloadCount}</strong> rows of your <strong>2,000</strong> row current monthly limit.
+                      📊 <strong>Quota Monitor:</strong> You have exported <strong>{user.downloadCount}</strong> rows of your <strong>{user.planType === 'Professional' ? '1,000' : '500'}</strong> row current limit.
                     </div>
                   )}
 

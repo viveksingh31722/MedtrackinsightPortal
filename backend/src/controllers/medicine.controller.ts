@@ -139,6 +139,13 @@ export const searchMedicines = async (req: Request, res: Response) => {
       hasCountryFilter = selectedCountries.length > 0;
     }
 
+    // Basic Plan Restriction: US Only
+    const reqUser = (req as any).user;
+    if (reqUser && reqUser.planType === 'Basic') {
+      selectedCountries = ['US'];
+      hasCountryFilter = true;
+    }
+
     let selectedDiseases: string[] = [];
     let hasDiseaseFilter = false;
     if (diseases !== undefined) {
@@ -446,9 +453,10 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
       return res.status(403).json({ message: 'CSV downloads require a PRO subscription' });
     }
 
-    if (user.downloadCount >= 2000) {
+    const limit = user.planType === 'Professional' ? 1000 : 500;
+    if (user.downloadCount >= limit) {
       return res.status(429).json({
-        message: 'Export limit exceeded. You have downloaded the maximum allowed rows (2,000) for this billing period.',
+        message: `Export limit exceeded. You have downloaded the maximum allowed rows (${limit.toLocaleString()}) for this subscription.`,
       });
     }
 
@@ -531,7 +539,7 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
       where: {
         id: user.id,
         downloadCount: {
-          lte: 2000 - exportSize,
+          lte: limit - exportSize,
         },
       },
       data: {
@@ -545,7 +553,7 @@ export const downloadMedicines = async (req: AuthenticatedRequest, res: Response
       const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
       const currentCount = freshUser ? freshUser.downloadCount : user.downloadCount;
       return res.status(429).json({
-        message: `This download contains ${exportSize} records, which would exceed your remaining quota of ${Math.max(0, 2000 - currentCount)} records.`,
+        message: `This download contains ${exportSize} records, which would exceed your remaining quota of ${Math.max(0, limit - currentCount)} records.`,
       });
     }
 

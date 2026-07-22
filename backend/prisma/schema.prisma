@@ -16,6 +16,7 @@ model User {
   email           String    @unique
   password        String
   isSubscribed    Boolean   @default(false)
+  planType        String    @default("Basic")
   subscriptionEnd DateTime?
   downloadCount   Int       @default(0)
   refreshToken    String?

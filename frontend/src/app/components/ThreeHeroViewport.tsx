@@ -18,7 +18,7 @@ export default function ThreeHeroViewport() {
 
     // 2. Camera setup
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
-    camera.position.set(0, 0, 14);
+    camera.position.set(0, 0, 12.5);
 
     // 3. Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -32,7 +32,7 @@ export default function ThreeHeroViewport() {
     scene.add(mainGroup);
 
     // Central Core Molecule Sphere
-    const coreGeometry = new THREE.IcosahedronGeometry(2.2, 2);
+    const coreGeometry = new THREE.IcosahedronGeometry(2.6, 2);
     const coreMaterial = new THREE.MeshPhongMaterial({
       color: 0x0284c7, // Sky 600
       emissive: 0x0369a1,
@@ -43,7 +43,7 @@ export default function ThreeHeroViewport() {
     mainGroup.add(coreMesh);
 
     // Inner Solid Sphere
-    const innerGeo = new THREE.SphereGeometry(1.4, 24, 24);
+    const innerGeo = new THREE.SphereGeometry(1.6, 24, 24);
     const innerMat = new THREE.MeshStandardMaterial({
       color: 0x059669, // Emerald 600
       roughness: 0.2,
@@ -55,23 +55,23 @@ export default function ThreeHeroViewport() {
     // 3D Orbital Target Rings
     const createRing = (radius: number, color: number, rotX: number, rotY: number) => {
       const ringGeo = new THREE.TorusGeometry(radius, 0.05, 16, 100);
-      const ringMat = new THREE.MeshBasicMaterial({ color, wireframe: false, transparent: true, opacity: 0.7 });
+      const ringMat = new THREE.MeshBasicMaterial({ color, wireframe: false, transparent: true, opacity: 0.75 });
       const ringMesh = new THREE.Mesh(ringGeo, ringMat);
       ringMesh.rotation.x = rotX;
       ringMesh.rotation.y = rotY;
       return ringMesh;
     };
 
-    const ring1 = createRing(3.4, 0x0284c7, Math.PI / 3, Math.PI / 6);
-    const ring2 = createRing(4.2, 0x059669, -Math.PI / 4, Math.PI / 3);
-    const ring3 = createRing(5.0, 0x0891b2, Math.PI / 2, 0);
+    const ring1 = createRing(3.8, 0x0284c7, Math.PI / 3, Math.PI / 6);
+    const ring2 = createRing(4.8, 0x059669, -Math.PI / 4, Math.PI / 3);
+    const ring3 = createRing(5.8, 0x0891b2, Math.PI / 2, 0);
 
     mainGroup.add(ring1);
     mainGroup.add(ring2);
     mainGroup.add(ring3);
 
     // Orbiting Atom Nodes
-    const atomGeo = new THREE.SphereGeometry(0.25, 16, 16);
+    const atomGeo = new THREE.SphereGeometry(0.28, 16, 16);
     const atomMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, shininess: 100 });
     const atomCount = 12;
     const atoms: THREE.Mesh[] = [];
@@ -79,7 +79,7 @@ export default function ThreeHeroViewport() {
     for (let i = 0; i < atomCount; i++) {
       const atom = new THREE.Mesh(atomGeo, atomMat);
       const angle = (i / atomCount) * Math.PI * 2;
-      atom.position.set(Math.cos(angle) * 3.4, Math.sin(angle) * 3.4, 0);
+      atom.position.set(Math.cos(angle) * 3.8, Math.sin(angle) * 3.8, 0);
       ring1.add(atom);
       atoms.push(atom);
     }
@@ -176,31 +176,12 @@ export default function ThreeHeroViewport() {
       ref={mountRef}
       style={{
         width: '100%',
-        height: '420px',
+        height: '350px',
         position: 'relative',
         background: 'transparent',
         border: 'none',
         boxShadow: 'none',
       }}
-    >
-      <div style={{
-        position: 'absolute',
-        bottom: '16px',
-        left: '20px',
-        fontSize: '11px',
-        fontWeight: 700,
-        fontFamily: 'var(--font-mono)',
-        color: 'var(--primary)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        background: 'rgba(255, 255, 255, 0.85)',
-        padding: '4px 12px',
-        borderRadius: '99px',
-        border: '1px solid var(--border)',
-        pointerEvents: 'none'
-      }}>
-        ⚡ Interactive 3D Target Molecule Viewer (Scroll & Drag)
-      </div>
-    </div>
+    />
   );
 }
