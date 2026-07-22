@@ -77,8 +77,10 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    // Dispatch verification email
-    await sendOtpEmail(email, otp, 'SIGNUP');
+    // Dispatch verification email in the background to avoid blocking the API response
+    sendOtpEmail(email, otp, 'SIGNUP').catch((err) => {
+      logger.error('Failed to dispatch registration OTP email:', { error: err });
+    });
 
     return res.status(200).json({
       message: 'Verification OTP sent to email. Please verify to complete registration.',
@@ -428,7 +430,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       },
     });
 
-    await sendOtpEmail(email, otp, 'PASSWORD_RESET');
+    // Dispatch verification email in the background to avoid blocking the API response
+    sendOtpEmail(email, otp, 'PASSWORD_RESET').catch((err) => {
+      logger.error('Failed to dispatch password reset OTP email:', { error: err });
+    });
 
     return res.status(200).json({
       message: 'Password reset OTP sent to email.',
