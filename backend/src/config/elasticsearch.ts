@@ -17,6 +17,21 @@ function wrapClient(client: any): any {
       const val = Reflect.get(target, prop, receiver);
       if (typeof val === 'function') {
         return async function (...args: any[]) {
+          // In v8, indices.create accepts settings and mappings at the root.
+          // In v7, indices.create expects settings and mappings inside a nested `body` object.
+          if (prop === 'create' && args[0]) {
+            const { index, settings, mappings, ...rest } = args[0];
+            if (settings || mappings) {
+              args[0] = {
+                index,
+                body: {
+                  ...(settings ? { settings } : {}),
+                  ...(mappings ? { mappings } : {}),
+                },
+                ...rest,
+              };
+            }
+          }
           const res = await val.apply(target, args);
           return res && res.body !== undefined ? res.body : res;
         };
