@@ -33,7 +33,7 @@ export const env = {
   ELASTICSEARCH_INDEX: process.env.ELASTICSEARCH_INDEX || 'medicines',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@medtrack.com',
   RESEND_API_KEY: getRequiredEnv('RESEND_API_KEY', 're_placeholder_key'),
-  RESEND_FROM: process.env.RESEND_FROM || 'MedTrackInsight <onboarding@resend.dev>',
+  RESEND_FROM: process.env.RESEND_FROM || process.env.SMTP_FROM || 'MedTrackInsight <noreply@medtrackintel.com>',
 };
 
 // Quick startup verification to make sure required configurations exist
