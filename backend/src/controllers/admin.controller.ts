@@ -263,7 +263,11 @@ export const uploadMedicineSheet = async (req: Request, res: Response) => {
     // Trigger Elasticsearch re-indexing in background
     try {
       const { exec } = require('child_process');
-      exec('npx ts-node prisma/reindex.ts', (err: any) => {
+      const cmd = process.env.NODE_ENV === 'production'
+        ? 'node dist/prisma/reindex.js'
+        : 'npx ts-node prisma/reindex.ts';
+        
+      exec(cmd, (err: any) => {
         if (err) logger.error('Elasticsearch background re-indexing failed:', { error: err });
       });
     } catch (esErr) {

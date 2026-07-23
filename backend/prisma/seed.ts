@@ -129,14 +129,43 @@ const makePatentSalesForecasting = (
 };
 
 async function main() {
-  console.log('🌱 Start seeding clinical databases...');
+  console.log('🌱 Checking database state before seeding...');
 
-  // Delete existing records
-  await prisma.pipelineProspector.deleteMany({});
-  await prisma.patentSalesForecasting.deleteMany({});
-  await prisma.user.deleteMany({});
+  // Check if clinical database already has records
+  const pipelineCount = await prisma.pipelineProspector.count();
+  const forecastingCount = await prisma.patentSalesForecasting.count();
 
-  // Create default test accounts
+  if (pipelineCount > 0 || forecastingCount > 0) {
+    console.log('⚠️ Database already contains clinical/medicine records. Skipping seeding to prevent overwriting production data.');
+    
+    // Still ensure default demo/admin accounts exist (using upsert, which is safe and preserves other users)
+    const bcrypt = require('bcrypt');
+    const hashedUserPassword = await bcrypt.hash('password123', 10);
+    const hashedAdminPassword = await bcrypt.hash('admin123', 10);
+    const subEnd = new Date();
+    subEnd.setDate(subEnd.getDate() + 30);
+
+    await prisma.user.upsert({
+      where: { email: 'user@medtrack.com' },
+      update: {},
+      create: { email: 'user@medtrack.com', password: hashedUserPassword, isSubscribed: false, emailVerified: true },
+    });
+    await prisma.user.upsert({
+      where: { email: 'pro@medtrack.com' },
+      update: {},
+      create: { email: 'pro@medtrack.com', password: hashedUserPassword, isSubscribed: true, subscriptionEnd: subEnd, emailVerified: true },
+    });
+    await prisma.user.upsert({
+      where: { email: 'admin@medtrack.com' },
+      update: {},
+      create: { email: 'admin@medtrack.com', password: hashedAdminPassword, isSubscribed: true, subscriptionEnd: subEnd, emailVerified: true },
+    });
+    return;
+  }
+
+  console.log('🌱 Database is empty. Proceeding with seeding default clinical datasets...');
+
+  // Create default test accounts only if they do not exist
   const bcrypt = require('bcrypt');
   const hashedUserPassword = await bcrypt.hash('password123', 10);
   const hashedAdminPassword = await bcrypt.hash('admin123', 10);
@@ -145,8 +174,10 @@ async function main() {
   subEnd.setDate(subEnd.getDate() + 30);
 
   // Normal unpaid/guest account
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'user@medtrack.com' },
+    update: {},
+    create: {
       email: 'user@medtrack.com',
       password: hashedUserPassword,
       isSubscribed: false,
@@ -155,8 +186,10 @@ async function main() {
   });
 
   // Paid pro user account
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'pro@medtrack.com' },
+    update: {},
+    create: {
       email: 'pro@medtrack.com',
       password: hashedUserPassword,
       isSubscribed: true,
@@ -166,8 +199,10 @@ async function main() {
   });
 
   // Admin user
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'admin@medtrack.com' },
+    update: {},
+    create: {
       email: 'admin@medtrack.com',
       password: hashedAdminPassword,
       isSubscribed: true,
