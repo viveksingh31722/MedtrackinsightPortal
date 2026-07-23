@@ -12,6 +12,18 @@ export default function HomePage() {
   const router = useRouter();
   const { apiBaseUrl } = useApp();
 
+  const [showAllTAs, setShowAllTAs] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Search input query
   const [quickQuery, setQuickQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -496,7 +508,7 @@ export default function HomePage() {
       </section>
 
       {/* Three.js Scroll Animation Layer (Mounted strictly after Hero section) */}
-      <ThreeScrollCanvas />
+      {mounted && !isMobile && <ThreeScrollCanvas />}
 
       {/* 2. Therapeutic Areas Showcase Section (21 Therapeutic Areas Covered) */}
       <section className="section" style={{ padding: '40px 0', position: 'relative', zIndex: 2 }}>
@@ -524,50 +536,80 @@ export default function HomePage() {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', maxWidth: '1150px', margin: '0 auto' }}>
-              {[
-                'Oncology', 'Hematology', 'Neurology', 'Cardiology', 
-                'Endocrinology', 'Diabetes', 'Rare Diseases', 'Immunology', 
-                'Autoimmune Disorders', 'Infectious Diseases', 'Vaccines', 
-                'Respiratory Diseases', 'Gastroenterology', 'Dermatology', 
-                'Ophthalmology', 'Nephrology', "Women's Health", "Men's Health", 
-                'CNS Disorders', 'Gene Therapy', 'Cell Therapy'
-              ].map((ta, idx) => (
+              {(() => {
+                const allTAs = [
+                  'Oncology', 'Hematology', 'Neurology', 'Cardiology', 
+                  'Endocrinology', 'Diabetes', 'Rare Diseases', 'Immunology', 
+                  'Autoimmune Disorders', 'Infectious Diseases', 'Vaccines', 
+                  'Respiratory Diseases', 'Gastroenterology', 'Dermatology', 
+                  'Ophthalmology', 'Nephrology', "Women's Health", "Men's Health", 
+                  'CNS Disorders', 'Gene Therapy', 'Cell Therapy'
+                ];
+                const visibleTAs = mounted && isMobile && !showAllTAs ? allTAs.slice(0, 8) : allTAs;
+                return visibleTAs.map((ta, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => router.push(`/search?query=${encodeURIComponent(ta)}&field=all`)}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '999px',
+                      border: '1.5px solid #0284c7',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
+                      transition: 'all 0.2s ease-in-out',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    className="category-pill"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#e0f2fe';
+                      e.currentTarget.style.borderColor = '#0369a1';
+                      e.currentTarget.style.color = '#0369a1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.borderColor = '#0284c7';
+                      e.currentTarget.style.color = '#0f172a';
+                    }}
+                  >
+                    <span>🧪</span>
+                    <span>{ta}</span>
+                  </button>
+                ));
+              })()}
+            </div>
+
+            {mounted && isMobile && (
+              <div style={{ textAlign: 'center', marginTop: '20px' }}>
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => router.push(`/search?query=${encodeURIComponent(ta)}&field=all`)}
+                  onClick={() => setShowAllTAs(!showAllTAs)}
                   style={{
-                    padding: '9px 18px',
+                    padding: '10px 20px',
                     borderRadius: '999px',
-                    border: '1.5px solid #0284c7',
-                    backgroundColor: '#ffffff',
-                    color: '#0f172a',
-                    fontSize: '13px',
-                    fontWeight: 700,
+                    border: '1.5px dashed #0284c7',
+                    backgroundColor: '#e0f2fe',
+                    color: '#0369a1',
+                    fontSize: '12px',
+                    fontWeight: 800,
                     cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
                     transition: 'all 0.2s ease-in-out',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  className="category-pill"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#e0f2fe';
-                    e.currentTarget.style.borderColor = '#0369a1';
-                    e.currentTarget.style.color = '#0369a1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = '#0284c7';
-                    e.currentTarget.style.color = '#0f172a';
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)'
                   }}
                 >
-                  <span>🧪</span>
-                  <span>{ta}</span>
+                  {showAllTAs ? 'Show Less Areas ▴' : 'Show All 21 Areas ▾'}
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

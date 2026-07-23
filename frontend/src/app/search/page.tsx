@@ -129,6 +129,15 @@ function SearchResultsContent() {
   const [meta, setMeta] = useState<any>({ total: 0, page: 1, limit: 10, totalPages: 1, isSubscribed: false });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [visibleMobileCount, setVisibleMobileCount] = useState(5);
+  const [expandedCardIds, setExpandedCardIds] = useState<string[]>([]);
+
+  const toggleCardExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedCardIds(prev =>
+      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
+    );
+  };
 
   // Selected drug details drawer
   const [selectedDrug, setSelectedDrug] = useState<any | null>(null);
@@ -342,6 +351,8 @@ function SearchResultsContent() {
 
   // Track page parameters when URL changes
   useEffect(() => {
+    setVisibleMobileCount(5);
+    setExpandedCardIds([]);
     if (!queryParam.trim()) {
       setQuery('');
       setOriginalQuery('');
@@ -440,6 +451,8 @@ function SearchResultsContent() {
         setMedicines(data.medicines);
         setMeta(data.meta);
         setPage(pageNum);
+        setVisibleMobileCount(5);
+        setExpandedCardIds([]);
         // Update cache
         sessionStorage.setItem('cachedSearchResults', JSON.stringify({
           medicines: data.medicines,
@@ -1969,6 +1982,119 @@ function SearchResultsContent() {
               cursor: pointer;
               font-weight: 800;
             }
+            .mobile-card-list {
+              display: none;
+            }
+            @media (max-width: 768px) {
+              .mobile-card-list {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                width: 100%;
+                margin-bottom: 24px;
+              }
+              .table-wrapper {
+                display: none !important;
+              }
+            }
+            .mobile-medicine-card {
+              background-color: var(--bg-surface);
+              border: 1.5px solid var(--border);
+              border-radius: 16px;
+              padding: 20px;
+              box-shadow: 4px 4px 0px 0px var(--border);
+              cursor: pointer;
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              text-align: left;
+            }
+            .mobile-medicine-card:hover {
+              transform: translateY(-2px);
+              box-shadow: 6px 6px 0px 0px var(--border);
+            }
+            .mobile-card-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 12px;
+            }
+            .mobile-card-title {
+              font-size: 16px;
+              font-weight: 800;
+              color: var(--primary);
+              margin: 0;
+              line-height: 1.3;
+            }
+            .mobile-card-country-badge {
+              font-size: 10px;
+              padding: 2px 6px;
+              border-radius: 4px;
+              background-color: rgba(59, 130, 246, 0.08);
+              color: var(--primary);
+              border: 1px solid rgba(59, 130, 246, 0.2);
+              font-weight: 700;
+              text-transform: uppercase;
+              flex-shrink: 0;
+            }
+            .mobile-card-badges {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+            }
+            .mobile-card-row {
+              font-size: 13px;
+              line-height: 1.5;
+              color: var(--text-main);
+            }
+            .mobile-card-row strong {
+              color: var(--text-muted);
+              margin-right: 6px;
+            }
+            .mobile-card-pro-details {
+              border-top: 1px dashed var(--border-muted);
+              padding-top: 12px;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+            .mobile-card-locked {
+              border-top: 1px dashed var(--border-muted);
+              padding-top: 12px;
+              font-size: 12px;
+              color: var(--text-light);
+              font-style: italic;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+            .mobile-card-action {
+              font-size: 11px;
+              font-weight: 700;
+              color: #ff7a00;
+              text-align: right;
+              margin-top: 4px;
+            }
+            .mobile-card-toggle-details-btn {
+              background: none;
+              border: none;
+              color: var(--primary);
+              font-size: 12px;
+              font-weight: 700;
+              cursor: pointer;
+              text-align: left;
+              padding: 0;
+              margin-top: 4px;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              width: fit-content;
+            }
+            .mobile-card-toggle-details-btn:hover {
+              color: var(--primary-hover);
+              text-decoration: underline;
+            }
           `}</style>
 
           <div className="grid-header-actions">
@@ -2091,86 +2217,193 @@ function SearchResultsContent() {
               </p>
             </div>
           ) : (
-            <div className="table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Drug Name</th>
-                    <th>Indication</th>
-                    <th>Mechanism of Action (MOA)</th>
-                    <th>Phase</th>
-                    
-                    {/* Pro columns toggled dynamically */}
-                    {meta.isSubscribed && visibleColumns.brandName && <th>Brand Name</th>}
-                    {meta.isSubscribed && visibleColumns.sponsor && <th>Sponsor</th>}
-                    {meta.isSubscribed && visibleColumns.route && <th>Route</th>}
-                    {meta.isSubscribed && visibleColumns.target && <th>Target</th>}
-                    {meta.isSubscribed && visibleColumns.trialId && <th>Trial ID</th>}
-                    {meta.isSubscribed && visibleColumns.moleculeType && <th>Molecule Type</th>}
-                    {meta.isSubscribed && visibleColumns.patentExpiry && <th>Patent Expiry</th>}
-                    {meta.isSubscribed && visibleColumns.molecularWeight && <th>Mol. Weight</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMedicines.map((med, idx) => {
-                    const additional = med.additionalData || {};
-                    return (
-                      <motion.tr 
-                        key={med.id} 
-                        onClick={() => handleRowClick(med)} 
-                        className="clickable-row"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.3) }}
-                      >
-                        <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                          {med.drugName}
-                          <span 
-                            style={{ 
-                              marginLeft: '8px', 
-                              fontSize: '10px', 
-                              padding: '2px 6px', 
-                              borderRadius: '4px', 
-                              backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                              color: 'var(--primary)',
-                              border: '1px solid rgba(59, 130, 246, 0.2)',
-                              display: 'inline-block',
-                              fontWeight: 600,
-                              textTransform: 'uppercase'
-                            }}
-                          >
-                            {med.country || additional.country || 'US'}
-                          </span>
-                        </td>
-                        <td>{med.indication}</td>
-                        <td>
-                          <span className="badge badge-info" style={{ fontFamily: 'monospace' }}>
-                            {med.moa}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${
-                            (med.phase || '').includes('Approved') ? 'badge-success' : 'badge-warning'
-                          }`}>
-                            {med.phase}
-                          </span>
-                        </td>
+            <>
+              {/* Desktop Table View */}
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Drug Name</th>
+                      <th>Indication</th>
+                      <th>Mechanism of Action (MOA)</th>
+                      <th>Phase</th>
+                      
+                      {/* Pro columns toggled dynamically */}
+                      {meta.isSubscribed && visibleColumns.brandName && <th>Brand Name</th>}
+                      {meta.isSubscribed && visibleColumns.sponsor && <th>Sponsor</th>}
+                      {meta.isSubscribed && visibleColumns.route && <th>Route</th>}
+                      {meta.isSubscribed && visibleColumns.target && <th>Target</th>}
+                      {meta.isSubscribed && visibleColumns.trialId && <th>Trial ID</th>}
+                      {meta.isSubscribed && visibleColumns.moleculeType && <th>Molecule Type</th>}
+                      {meta.isSubscribed && visibleColumns.patentExpiry && <th>Patent Expiry</th>}
+                      {meta.isSubscribed && visibleColumns.molecularWeight && <th>Mol. Weight</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMedicines.map((med, idx) => {
+                      const additional = med.additionalData || {};
+                      return (
+                        <motion.tr 
+                          key={med.id} 
+                          onClick={() => handleRowClick(med)} 
+                          className="clickable-row"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.3) }}
+                        >
+                          <td style={{ fontWeight: 700, color: 'var(--primary)' }}>
+                            {med.drugName}
+                            <span 
+                              style={{ 
+                                marginLeft: '8px', 
+                                fontSize: '10px', 
+                                padding: '2px 6px', 
+                                borderRadius: '4px', 
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                color: 'var(--primary)',
+                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                display: 'inline-block',
+                                fontWeight: 600,
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              {med.country || additional.country || 'US'}
+                            </span>
+                          </td>
+                          <td>{med.indication}</td>
+                          <td>
+                            <span className="badge badge-info" style={{ fontFamily: 'monospace' }}>
+                              {med.moa}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge ${
+                              (med.phase || '').includes('Approved') ? 'badge-success' : 'badge-warning'
+                            }`}>
+                              {med.phase}
+                            </span>
+                          </td>
 
-                        {/* Pro dynamic values */}
-                        {meta.isSubscribed && visibleColumns.brandName && <td>{additional.brandName || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.sponsor && <td>{additional.sponsor || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.route && <td>{additional.route || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.target && <td>{additional.target || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.trialId && <td>{additional.trialId || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.moleculeType && <td>{additional.moleculeType || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.patentExpiry && <td>{additional.patentExpiry || 'N/A'}</td>}
-                        {meta.isSubscribed && visibleColumns.molecularWeight && <td>{additional.molecularWeight || 'N/A'}</td>}
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {/* Pro dynamic values */}
+                          {meta.isSubscribed && visibleColumns.brandName && <td>{additional.brandName || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.sponsor && <td>{additional.sponsor || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.route && <td>{additional.route || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.target && <td>{additional.target || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.trialId && <td>{additional.trialId || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.moleculeType && <td>{additional.moleculeType || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.patentExpiry && <td>{additional.patentExpiry || 'N/A'}</td>}
+                          {meta.isSubscribed && visibleColumns.molecularWeight && <td>{additional.molecularWeight || 'N/A'}</td>}
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card List View */}
+              <div className="mobile-card-list">
+                {filteredMedicines.slice(0, visibleMobileCount).map((med, idx) => {
+                  const additional = med.additionalData || {};
+                  return (
+                    <motion.div 
+                      key={med.id} 
+                      onClick={() => handleRowClick(med)} 
+                      className="mobile-medicine-card"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.2) }}
+                    >
+                      <div className="mobile-card-header">
+                        <h4 className="mobile-card-title">{med.drugName}</h4>
+                        <span className="mobile-card-country-badge">
+                          {med.country || additional.country || 'US'}
+                        </span>
+                      </div>
+                      
+                      <div className="mobile-card-badges">
+                        <span className={`badge ${
+                          (med.phase || '').includes('Approved') ? 'badge-success' : 'badge-warning'
+                        }`}>
+                          {med.phase}
+                        </span>
+                        <span className="badge badge-info" style={{ fontFamily: 'monospace' }}>
+                          {med.moa}
+                        </span>
+                      </div>
+
+                      <div className="mobile-card-row">
+                        <strong>Indication:</strong> <span>{med.indication}</span>
+                      </div>
+
+                      {meta.isSubscribed && (
+                        <button
+                          type="button"
+                          onClick={(e) => toggleCardExpand(med.id, e)}
+                          className="mobile-card-toggle-details-btn"
+                        >
+                          {expandedCardIds.includes(med.id) ? 'Show Less Details ▴' : 'Show More Details ▾'}
+                        </button>
+                      )}
+
+                      {meta.isSubscribed && expandedCardIds.includes(med.id) && (
+                        <div className="mobile-card-pro-details">
+                          {visibleColumns.brandName && additional.brandName && (
+                            <div className="mobile-card-row">
+                              <strong>Brand Name:</strong> <span>{additional.brandName}</span>
+                            </div>
+                          )}
+                          {visibleColumns.sponsor && additional.sponsor && (
+                            <div className="mobile-card-row">
+                              <strong>Sponsor:</strong> <span>{additional.sponsor}</span>
+                            </div>
+                          )}
+                          {visibleColumns.route && additional.route && (
+                            <div className="mobile-card-row">
+                              <strong>Route:</strong> <span>{additional.route}</span>
+                            </div>
+                          )}
+                          {visibleColumns.target && additional.target && (
+                            <div className="mobile-card-row">
+                              <strong>Target:</strong> <span>{additional.target}</span>
+                            </div>
+                          )}
+                          {visibleColumns.trialId && additional.trialId && (
+                            <div className="mobile-card-row">
+                              <strong>Trial ID:</strong> <span>{additional.trialId}</span>
+                            </div>
+                          )}
+                          {visibleColumns.moleculeType && additional.moleculeType && (
+                            <div className="mobile-card-row">
+                              <strong>Molecule Type:</strong> <span>{additional.moleculeType}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!meta.isSubscribed && (
+                        <div className="mobile-card-locked">
+                          <span>🔒 Subscribe to unlock 41 additional fields</span>
+                        </div>
+                      )}
+                      
+                      <div className="mobile-card-action">
+                        <span>Tap to view clinical timeline &rarr;</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                
+                {filteredMedicines.length > visibleMobileCount && (
+                  <button 
+                    onClick={() => setVisibleMobileCount(prev => prev + 5)}
+                    className="btn btn-outline btn-sm"
+                    style={{ width: '100%', margin: '12px 0 24px 0', padding: '12px', fontWeight: 800 }}
+                  >
+                    🔽 Show More Records (+5)
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           {/* Guest Paywall banner warning */}

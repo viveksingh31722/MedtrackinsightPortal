@@ -502,7 +502,7 @@ export default function RootLayout({
       <head>
         <title>MedTrackInsight Portal - Molecular and Clinical Trial Intelligence</title>
         <meta name="description" content="Search drug pipelines, clinical moa databases, and extract FDA/EMA approved medical intelligence with 45 analytical columns." />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/logo.jpg" />
       </head>
       <body>
         <AppProvider>
