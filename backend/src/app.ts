@@ -29,9 +29,30 @@ app.use(morganMiddleware);
 // CORS concept: Cross-Origin Resource Sharing.
 // Since our Next.js frontend runs on localhost:3000 and the Express backend runs on localhost:5000,
 // we must explicitly configure CORS to allow requests from the frontend and support HTTP-only cookie credentials.
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  'https://medtrackintel.com',
+  'https://www.medtrackintel.com',
+  'https://medtrackinsight-portal.vercel.app'
+];
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, postman, curl, or same-origin)
+      if (!origin) return callback(null, true);
+      
+      const isAllowed = allowedOrigins.includes(origin) || 
+                        origin.endsWith('.vercel.app') || 
+                        origin === 'http://localhost:3000';
+                        
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`Blocked by CORS: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true, // Allows cookies to be received and set cross-origin
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
