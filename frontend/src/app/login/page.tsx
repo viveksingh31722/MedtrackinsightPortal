@@ -39,6 +39,7 @@ function AuthForm() {
 
   // OTP Signup verification overlay state
   const [showSignupOtp, setShowSignupOtp] = useState(false);
+  const [isOtpSending, setIsOtpSending] = useState(false);
   const [signupOtp, setSignupOtp] = useState('');
   const [timer, setTimer] = useState(600); // 10 minutes expiry countdown
 
@@ -122,6 +123,11 @@ function AuthForm() {
 
     try {
       setLoading(true);
+      if (activeTab === 'signup') {
+        setShowSignupOtp(true);
+        setIsOtpSending(true);
+      }
+
       const url = activeTab === 'signup' ? `${apiBaseUrl}/auth/register` : `${apiBaseUrl}/auth/login`;
 
       const res = await fetch(url, {
@@ -139,7 +145,7 @@ function AuthForm() {
       if (res.ok) {
         if (activeTab === 'signup') {
           showToast(data.message || 'OTP verification sent to email.', 'success');
-          setShowSignupOtp(true);
+          setIsOtpSending(false);
           setTimer(600); // 10 minutes
         } else {
           loginUser(email, data.accessToken, data.user);
@@ -151,10 +157,18 @@ function AuthForm() {
           }
         }
       } else {
+        if (activeTab === 'signup') {
+          setIsOtpSending(false);
+          setShowSignupOtp(false);
+        }
         showToast(data.message || 'Authentication failed', 'danger');
       }
     } catch (err) {
       console.error(err);
+      if (activeTab === 'signup') {
+        setIsOtpSending(false);
+        setShowSignupOtp(false);
+      }
       showToast('Could not establish connection to authentication server', 'danger');
     } finally {
       setLoading(false);
@@ -420,56 +434,97 @@ function AuthForm() {
 
           {/* 1. Signup verification overlay view */}
           {showSignupOtp ? (
-            <div>
-              <div style={{ marginBottom: '24px' }}>
-                <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>Verify Email</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 500 }}>
-                  Enter the 6-digit OTP code sent to <strong style={{ color: '#000000' }}>{email}</strong>.
-                </p>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1, justifyContent: 'center' }}>
+              {isOtpSending ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '24px 0', textAlign: 'center' }}>
+                  <div className="spinner-loader" style={{ 
+                    width: '50px', 
+                    height: '50px', 
+                    border: '4px solid #e2e8f0', 
+                    borderTop: '4px solid var(--primary)', 
+                    borderRadius: '50%', 
+                    animation: 'spin 1s linear infinite',
+                    marginBottom: '20px'
+                  }} />
+                  <style>{`
+                    @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                    }
+                  `}</style>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-main)' }}>
+                    Sending Verification Code
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.6', maxWidth: '280px', margin: '0 auto 24px' }}>
+                    We are generating a secure OTP and dispatching it to <strong style={{ color: 'var(--text-main)' }}>{email}</strong>. This may take a moment.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtpSending(false);
+                      setShowSignupOtp(false);
+                    }}
+                    className="btn btn-outline"
+                    style={{ width: '100%', height: '48px' }}
+                  >
+                    Cancel & Go Back
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', flex: 1 }}>
+                  <div>
+                    <div style={{ marginBottom: '24px' }}>
+                      <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>Verify Email</h1>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 500 }}>
+                        Enter the 6-digit OTP code sent to <strong style={{ color: '#000000' }}>{email}</strong>.
+                      </p>
+                    </div>
 
-              <form onSubmit={handleVerifySignupOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div className="form-group">
-                  <label htmlFor="signup-otp" className="form-label">OTP Verification Code</label>
-                  <input
-                    id="signup-otp"
-                    type="text"
-                    maxLength={6}
-                    value={signupOtp}
-                    onChange={(e) => setSignupOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="XXXXXX"
-                    className="form-input"
-                    style={{ textAlign: 'center', fontSize: '22px', letterSpacing: '0.2em', fontWeight: 800 }}
-                    required
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px', fontWeight: 700 }}>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Code expires in: <span style={{ color: 'var(--danger)' }}>{formatTimer(timer)}</span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={timer > 480} // 2 minutes cooldown limit
-                      onClick={handleResendSignupOtp}
-                      style={{ background: 'none', border: 'none', color: timer > 480 ? 'var(--text-light)' : 'var(--text-main)', cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}
-                    >
-                      Resend Code
-                    </button>
+                    <form onSubmit={handleVerifySignupOtp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div className="form-group">
+                        <label htmlFor="signup-otp" className="form-label">OTP Verification Code</label>
+                        <input
+                          id="signup-otp"
+                          type="text"
+                          maxLength={6}
+                          value={signupOtp}
+                          onChange={(e) => setSignupOtp(e.target.value.replace(/\D/g, ''))}
+                          placeholder="XXXXXX"
+                          className="form-input"
+                          style={{ textAlign: 'center', fontSize: '22px', letterSpacing: '0.2em', fontWeight: 800 }}
+                          required
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px', fontWeight: 700 }}>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            Code expires in: <span style={{ color: 'var(--danger)' }}>{formatTimer(timer)}</span>
+                          </span>
+                          <button
+                            type="button"
+                            disabled={timer > 480} // 2 minutes cooldown limit
+                            onClick={handleResendSignupOtp}
+                            style={{ background: 'none', border: 'none', color: timer > 480 ? 'var(--text-light)' : 'var(--text-main)', cursor: 'pointer', textDecoration: 'underline', fontWeight: 800 }}
+                          >
+                            Resend Code
+                          </button>
+                        </div>
+                      </div>
+
+                      <button type="submit" disabled={loading} className="btn btn-primary" style={{ height: '48px' }}>
+                        {loading ? 'Verifying...' : 'Verify & Continue'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupOtp(false)}
+                        className="btn btn-outline"
+                        style={{ height: '48px' }}
+                      >
+                        Back to Register
+                      </button>
+                    </form>
                   </div>
                 </div>
-
-                <button type="submit" disabled={loading} className="btn btn-primary" style={{ height: '48px' }}>
-                  {loading ? 'Verifying...' : 'Verify & Continue'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowSignupOtp(false)}
-                  className="btn btn-outline"
-                  style={{ height: '48px' }}
-                >
-                  Back to Register
-                </button>
-              </form>
+              )}
             </div>
           ) : forgotPassStep > 0 ? (
             /* 2. Forgot password flows views */
