@@ -5,7 +5,7 @@ import path from 'path';
 
 const resend = new Resend(env.RESEND_API_KEY || 're_placeholder_key');
 const RESEND_FROM = env.RESEND_FROM || 'MedTrackInsight <onboarding@resend.dev>';
-const ADMIN_EMAIL = env.ADMIN_EMAIL || 'admin@medtrack.com';
+const ADMIN_EMAIL = env.ADMIN_EMAIL || 'support@medtrackintel.com';
 
 /**
  * Sends an OTP verification email to the user.

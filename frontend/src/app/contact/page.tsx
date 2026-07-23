@@ -30,7 +30,7 @@ const HERO_SUBTITLE_STYLE: React.CSSProperties = {
 };
 
 export default function ContactPage() {
-  const { showToast } = useApp();
+  const { apiBaseUrl, showToast } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
@@ -42,22 +42,42 @@ export default function ContactPage() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !message) {
       showToast('Please fill out all required fields.', 'warning');
       return;
     }
 
-    setSubmitting(true);
-    setTimeout(() => {
+    try {
+      setSubmitting(true);
+      const finalMessage = organization ? `[Organization: ${organization}]\n\n${message}` : message;
+      
+      const res = await fetch(`${apiBaseUrl}/admin/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, message: finalMessage }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast('Thank you! Your inquiry has been sent to our Research Desk.', 'success');
+        setName('');
+        setEmail('');
+        setOrganization('');
+        setMessage('');
+      } else {
+        showToast(data.message || 'Error sending contact inquiry.', 'danger');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Could not reach application server', 'danger');
+    } finally {
       setSubmitting(false);
-      showToast('Thank you! Your inquiry has been sent to our Research Desk.', 'success');
-      setName('');
-      setEmail('');
-      setOrganization('');
-      setMessage('');
-    }, 1000);
+    }
   };
 
   return (
