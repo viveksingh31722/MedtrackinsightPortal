@@ -182,6 +182,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       id: userDetails.id,
       email: userDetails.email,
       isSubscribed: userDetails.isSubscribed,
+      planType: userDetails.planType || 'Basic',
       downloadCount: userDetails.downloadCount || 0,
       subscriptionEnd: userDetails.subscriptionEnd,
       isAdmin: userDetails.isAdmin || false,
