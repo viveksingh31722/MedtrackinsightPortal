@@ -502,6 +502,8 @@ export default function RootLayout({
       <head>
         <title>MedTrackInsight Portal - Molecular and Clinical Trial Intelligence</title>
         <meta name="description" content="Search drug pipelines, clinical moa databases, and extract FDA/EMA approved medical intelligence with 45 analytical columns." />
+        {/* Uncomment and replace with your actual verification code from Google Search Console: */}
+        {/* <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" /> */}
         <link rel="icon" href="/logo.jpg" />
       </head>
       <body>
