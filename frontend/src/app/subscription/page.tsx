@@ -211,7 +211,7 @@ export default function SubscriptionPage() {
               transition: 'all 0.2s ease',
             }}
           >
-            Monthly Billing
+            6 Months Billing
           </button>
           <button
             onClick={() => setBillingCycle('annual')}
@@ -227,7 +227,7 @@ export default function SubscriptionPage() {
               transition: 'all 0.2s ease',
             }}
           >
-            Annual Billing (Best Value)
+            12 Months Billing (Save ~37%)
           </button>
         </div>
       </div>
@@ -259,10 +259,10 @@ export default function SubscriptionPage() {
 
           <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '28px' }}>
             <span style={{ fontSize: '38px', fontWeight: 900, color: 'var(--text-main)' }}>
-              ₹{billingCycle === 'monthly' ? '1,999' : '14,999'}
+              ₹{billingCycle === 'monthly' ? '5' : '10'}
             </span>
             <span style={{ color: 'var(--text-light)', marginLeft: '8px', fontSize: '14px', fontWeight: 600 }}>
-              / {billingCycle === 'monthly' ? 'month' : 'year'}
+              / {billingCycle === 'monthly' ? '6 months' : '12 months'}
             </span>
             {billingCycle === 'annual' && (
               <span style={{ marginLeft: '12px', color: '#10B981', fontSize: '11px', fontWeight: 800, backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '999px' }}>
@@ -358,10 +358,10 @@ export default function SubscriptionPage() {
 
           <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '28px' }}>
             <span style={{ fontSize: '38px', fontWeight: 900, color: 'var(--text-main)' }}>
-              ₹{billingCycle === 'monthly' ? '1,999' : '24,999'}
+              ₹{billingCycle === 'monthly' ? '5' : '10'}
             </span>
             <span style={{ color: 'var(--text-light)', marginLeft: '8px', fontSize: '14px', fontWeight: 600 }}>
-              / {billingCycle === 'monthly' ? 'month' : 'year'}
+              / {billingCycle === 'monthly' ? '6 months' : '12 months'}
             </span>
           </div>
 

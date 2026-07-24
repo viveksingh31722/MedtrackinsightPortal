@@ -29,15 +29,16 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
       const { planType, billingCycle } = req.body;
       const isMonthly = billingCycle === 'monthly';
       if (planType === 'Starter') {
-        amount = isMonthly ? 199900 : 1499900; // ₹1,999 vs ₹14,999
+        amount = isMonthly ? 500 : 1000; // ₹5 vs ₹10
       } else if (planType === 'Professional') {
-        amount = isMonthly ? 199900 : 2499900; // ₹1,999 vs ₹24,999
+        amount = isMonthly ? 500 : 1000; // ₹5 vs ₹10
       } else {
-        amount = 1499900; // Default fallback Starter Annual
+        amount = 1000; // Default fallback Starter Annual (₹10)
       }
     }
 
-    const receiptId = `receipt_usr_${req.user.userId.slice(0, 8)}_${Date.now().toString().slice(-6)}`;
+    const currency = req.body.currency || 'INR';
+    const receiptId = req.body.receipt || `receipt_usr_${req.user.userId.slice(0, 8)}_${Date.now().toString().slice(-6)}`;
     const isSandbox = env.RAZORPAY_KEY_ID.includes('placeholder') || 
                       env.RAZORPAY_KEY_SECRET.includes('placeholder') ||
                       env.RAZORPAY_KEY_SECRET.includes('local_only');
@@ -49,7 +50,7 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
         id: simulatedId,
         order_id: simulatedId,
         amount,
-        currency: 'INR',
+        currency,
         receipt: receiptId,
         isSandbox: true,
         key: env.RAZORPAY_KEY_ID,
@@ -66,8 +67,13 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
 
       const order = await rzp.orders.create({
         amount,
-        currency: 'INR',
+        currency,
         receipt: receiptId,
+        notes: {
+          userId: req.user.userId,
+          planType: req.body.planType || 'Starter',
+          billingCycle: req.body.billingCycle || 'annual',
+        }
       });
 
       return res.status(200).json({
@@ -84,7 +90,7 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
         id: simulatedId,
         order_id: simulatedId,
         amount,
-        currency: 'INR',
+        currency,
         receipt: receiptId,
         isSandbox: true,
         key: env.RAZORPAY_KEY_ID,
@@ -135,75 +141,82 @@ export const verifyPayment = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(400).json({ message: 'Payment verification failed. Invalid signature.' });
     }
 
-    // Upgrade the user in PostgreSQL
     const planType = req.body.planType || 'Starter';
     const billingCycle = req.body.billingCycle || 'annual';
 
-    // Calculate subscription end date based on billing cycle (1 month vs 12 months)
+    // Calculate subscription end date based on billing cycle (6 months vs 12 months)
     const subscriptionEnd = new Date();
     if (billingCycle === 'monthly') {
-      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 6);
     } else {
       subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.userId },
-      data: {
-        isSubscribed: true,
-        planType,
-        subscriptionEnd,
-        downloadCount: 0, // Reset download quotas upon purchase
-      },
-    });
-
-    // Generate unique invoice details
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    
-    // Find the latest invoice for the current month to get the next sequential number
-    const latestInvoice = await prisma.invoice.findFirst({
-      where: {
-        invoiceNumber: {
-          startsWith: `MTI-${year}-${month}-`
-        }
-      },
-      orderBy: {
-        invoiceNumber: 'desc'
-      }
-    });
-
-    let nextSeq = 1;
-    if (latestInvoice) {
-      const parts = latestInvoice.invoiceNumber.split('-');
-      const lastSeq = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(lastSeq)) {
-        nextSeq = lastSeq + 1;
-      }
-    }
-    const sequenceNum = String(nextSeq).padStart(4, '0');
-    const invoiceNumber = `MTI-${year}-${month}-${sequenceNum}`;
 
     let amountVal = planType === 'Professional'
-      ? (billingCycle === 'monthly' ? 1999 : 24999)
-      : (billingCycle === 'monthly' ? 1999 : 14999);
+      ? (billingCycle === 'monthly' ? 5 : 10)
+      : (billingCycle === 'monthly' ? 5 : 10);
     if (req.body.amount) amountVal = req.body.amount / 100;
 
     const planName = planType === 'Professional'
-      ? `Professional Plan (${billingCycle === 'monthly' ? 'Monthly' : '1 Year'} - 3 Licenses)`
-      : `Starter Plan (${billingCycle === 'monthly' ? 'Monthly' : '1 Year'} - 1 License)`;
+      ? `Professional Plan (${billingCycle === 'monthly' ? '6 Months' : '12 Months'} - 3 Licenses)`
+      : `Starter Plan (${billingCycle === 'monthly' ? '6 Months' : '12 Months'} - 1 License)`;
 
-    await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        userId: req.user.userId,
-        amount: amountVal,
-        currency: 'INR',
-        status: 'paid',
-        planName,
-        paymentId: razorpay_payment_id,
-        orderId: razorpay_order_id,
-      },
+    const userId = req.user.userId;
+
+    // Perform database operations as an atomic ACID transaction
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // 1. Upgrade User
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: {
+          isSubscribed: true,
+          planType,
+          subscriptionEnd,
+          downloadCount: 0, // Reset download quotas upon purchase
+        },
+      });
+
+      // 2. Generate unique invoice details
+      const latestInvoice = await tx.invoice.findFirst({
+        where: {
+          invoiceNumber: {
+            startsWith: `MTI-${year}-${month}-`
+          }
+        },
+        orderBy: {
+          invoiceNumber: 'desc'
+        }
+      });
+
+      let nextSeq = 1;
+      if (latestInvoice) {
+        const parts = latestInvoice.invoiceNumber.split('-');
+        const lastSeq = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastSeq)) {
+          nextSeq = lastSeq + 1;
+        }
+      }
+      const sequenceNum = String(nextSeq).padStart(4, '0');
+      const invoiceNumber = `MTI-${year}-${month}-${sequenceNum}`;
+
+      // 3. Create Invoice
+      await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          userId,
+          amount: amountVal,
+          currency: 'INR',
+          status: 'paid',
+          planName,
+          paymentId: razorpay_payment_id,
+          orderId: razorpay_order_id,
+        },
+      });
+
+      return user;
     });
 
     return res.status(200).json({
@@ -281,3 +294,134 @@ export const downloadInvoicePdf = async (req: AuthenticatedRequest, res: Respons
     }
   }
 };
+
+export const handleWebhook = async (req: any, res: Response) => {
+  const signature = req.headers['x-razorpay-signature'] as string;
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    logger.error('RAZORPAY_WEBHOOK_SECRET is not configured in environment variables.');
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  if (!signature) {
+    logger.warn('Received Razorpay webhook request without signature header');
+    return res.status(400).json({ message: 'Missing x-razorpay-signature header' });
+  }
+
+  // Verify signature
+  try {
+    const Razorpay = require('razorpay');
+    // Use rawBody string to avoid serialization mismatch errors
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const isValid = Razorpay.validateWebhookSignature(rawBody, signature, webhookSecret);
+    
+    if (!isValid) {
+      logger.warn('Invalid Razorpay webhook signature');
+      return res.status(400).json({ message: 'Invalid signature verification failed' });
+    }
+  } catch (err: any) {
+    logger.error('Error validating Razorpay webhook signature:', err);
+    return res.status(400).json({ message: 'Signature validation failed' });
+  }
+
+  const event = req.body.event;
+  logger.info(`Received verified Razorpay webhook event: ${event}`);
+
+  if (event === 'order.paid' || event === 'payment.captured') {
+    try {
+      const entity = event === 'order.paid' ? req.body.payload.order.entity : req.body.payload.payment.entity;
+      const notes = entity.notes || {};
+      const userId = notes.userId;
+      const planType = notes.planType || 'Starter';
+      const billingCycle = notes.billingCycle || 'annual';
+      
+      const orderId = entity.order_id || entity.id;
+      const paymentId = entity.payment_id || (event === 'payment.captured' ? entity.id : '');
+
+      if (!userId) {
+        logger.warn(`No userId found in webhook notes for event ${event}. Ignoring.`);
+        return res.status(200).json({ status: 'ok', message: 'No action taken: missing userId notes metadata' });
+      }
+
+      // 1. Upgrade User & Create Invoice inside an ACID Transaction
+      await prisma.$transaction(async (tx) => {
+        const subscriptionEnd = new Date();
+        if (billingCycle === 'monthly') {
+          subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 6);
+        } else {
+          subscriptionEnd.setFullYear(subscriptionEnd.getFullYear() + 1);
+        }
+
+        // Upgrade User
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            isSubscribed: true,
+            planType,
+            subscriptionEnd,
+            downloadCount: 0,
+          },
+        });
+
+        // Check if invoice already exists
+        const existingInvoice = await tx.invoice.findFirst({
+          where: {
+            OR: [
+              { paymentId: paymentId || undefined },
+              { orderId }
+            ]
+          },
+        });
+
+        if (!existingInvoice) {
+          const year = new Date().getFullYear();
+          const month = String(new Date().getMonth() + 1).padStart(2, '0');
+          
+          const latestInvoice = await tx.invoice.findFirst({
+            where: { invoiceNumber: { startsWith: `MTI-${year}-${month}-` } },
+            orderBy: { invoiceNumber: 'desc' }
+          });
+
+          let nextSeq = 1;
+          if (latestInvoice) {
+            const parts = latestInvoice.invoiceNumber.split('-');
+            const lastSeq = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
+          }
+          const sequenceNum = String(nextSeq).padStart(4, '0');
+          const invoiceNumber = `MTI-${year}-${month}-${sequenceNum}`;
+
+          const amountVal = (entity.amount || 0) / 100;
+          const planName = planType === 'Professional'
+            ? `Professional Plan (${billingCycle === 'monthly' ? '6 Months' : '12 Months'} - 3 Licenses)`
+            : `Starter Plan (${billingCycle === 'monthly' ? '6 Months' : '12 Months'} - 1 License)`;
+
+          await tx.invoice.create({
+            data: {
+              invoiceNumber,
+              userId,
+              amount: amountVal,
+              currency: 'INR',
+              status: 'paid',
+              planName,
+              paymentId: paymentId || `pay_web_${crypto.randomBytes(6).toString('hex')}`,
+              orderId,
+            },
+          });
+          logger.info(`Webhook created invoice ${invoiceNumber} for user ${userId} inside transaction`);
+        } else {
+          logger.info(`Invoice already exists for order ${orderId} / payment ${paymentId}. Skipping invoice creation.`);
+        }
+      });
+
+      logger.info(`Successfully processed webhook upgrade for user ${userId}, order ${orderId}`);
+    } catch (err: any) {
+      logger.error('Error processing Razorpay webhook database transaction update:', err);
+      return res.status(500).json({ message: 'Error processing webhook event' });
+    }
+  }
+
+  return res.status(200).json({ status: 'ok' });
+};
+

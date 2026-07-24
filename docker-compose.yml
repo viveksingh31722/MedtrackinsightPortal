@@ -43,8 +43,9 @@ services:
       - JWT_REFRESH_SECRET=medtrack_refresh_token_secret_key_67890!
       - ELASTICSEARCH_NODE=http://elasticsearch:9200
       - ELASTICSEARCH_INDEX=medicines
-      - RAZORPAY_KEY_ID=rzp_test_TEXpNVt9jnm1yO
-      - RAZORPAY_KEY_SECRET=X1bheCerT9T8XYGguQEfY95t
+      - RAZORPAY_KEY_ID=rzp_test_THFy2fyHgseV1k
+      - RAZORPAY_KEY_SECRET=mdFNr1qtyNTviJopg5ZCQlNb
+      - RAZORPAY_WEBHOOK_SECRET=test_webhook_secret
       - RESEND_API_KEY=re_placeholder_key
       - RESEND_FROM=MedTrackInsight <onboarding@resend.dev>
     ports:
@@ -59,7 +60,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:5000/api
-        - NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_TBLrLOsxDIOCqb
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_THFy2fyHgseV1k
     container_name: medtrackinsight-frontend
     restart: always
     ports:

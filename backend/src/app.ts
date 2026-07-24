@@ -66,7 +66,13 @@ app.set('trust proxy', 1);
 app.use(generalLimiter);
 
 // Built-in Express parsing middleware
-app.use(express.json()); // Parses application/json body payloads
+app.use(
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+); // Parses application/json body payloads with rawBody capture
 app.use(express.urlencoded({ extended: true })); // Parses urlencoded payloads
 app.use(cookieParser()); // Parses Cookie headers and populates req.cookies
 
