@@ -46,6 +46,7 @@ services:
       - RAZORPAY_KEY_ID=rzp_live_THGv0tIcM2OGCQ
       - RAZORPAY_KEY_SECRET=KM2Zagi1ERaCxjT56goEyhtN
       - RAZORPAY_WEBHOOK_SECRET=test_webhook_secret
+      - SENTRY_DSN=https://de5d13536ced358ac9dd85aabc454b2e@o4511789486768128.ingest.us.sentry.io/4511789525237760
       - RESEND_API_KEY=re_placeholder_key
       - RESEND_FROM=MedTrackInsight <onboarding@resend.dev>
     ports:
@@ -61,6 +62,9 @@ services:
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:5000/api
         - NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_THGv0tIcM2OGCQ
+        - NEXT_PUBLIC_GA_ID=G-9JQW4V3YSE
+        - NEXT_PUBLIC_CLARITY_ID=xrdwfgb5vh
+        - NEXT_PUBLIC_SENTRY_DSN=https://54b5040ef66a9baad2095f1487ce662c@o4511789486768128.ingest.us.sentry.io/4511789495418880
     container_name: medtrackinsight-frontend
     restart: always
     ports:

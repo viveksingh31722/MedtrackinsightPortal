@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import * as Sentry from '@sentry/node';
 import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { medicineRoutes } from './routes/medicine.routes';
@@ -11,6 +12,14 @@ import { adminRoutes } from './routes/admin.routes';
 import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 import { createOrder, verifyPayment } from './controllers/payment.controller';
 import { authenticateJWT } from './middleware/auth.middleware';
+
+// Initialize Sentry for backend error tracking in production
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 0.1,
+  });
+}
 
 const app = express();
 
@@ -93,6 +102,11 @@ app.use('/api/admin', adminRoutes);
 app.use((req, res) => {
   res.status(404).json({ message: `Resource not found: ${req.method} ${req.url}` });
 });
+
+// Sentry error handler (must be placed before our custom error catcher)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Express global exception catcher
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
